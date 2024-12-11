@@ -3,7 +3,7 @@
         <title>online game</title>
         <style>
             #player { height: 50px; width: 50px; background-color: blue; position: absolute; overflow: hidden; }
-            .otherplayer { transition: 0.1s linear; }
+            .otherplayer { transition: 0.1s linear; overflow: hidden; }
             input { position: absolute; }
         </style>
     </head>
@@ -33,7 +33,7 @@
             let keys = {};
             let showInput = false;
             let sendValue = 0;
-            let pos = { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50 };
+            let pos = { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "" };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
             onDisconnect(playerRef).remove();
@@ -44,6 +44,7 @@
                     showInput = !showInput;
                     if (!showInput) {
                         player.textContent = input.value;
+                        pos.message = input.value;
                     }
                 }
             });
@@ -102,6 +103,7 @@
                                         otherPlayerDiv.style.width = "50px";
                                         otherPlayerDiv.style.height = "50px";
                                         otherPlayerDiv.style.position = "absolute";
+                                        otherPlayerDiv.textContent = otherPlayer.message;
                                         otherPlayerDiv.style.backgroundColor = "red";
                                         document.body.appendChild(otherPlayerDiv);
                                     }
