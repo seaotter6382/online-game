@@ -2,11 +2,105 @@
     <head>
         <title>online game</title>
         <style>
-        #player { height: 50px; width: 50px; background-color: blue; position: absolute; }
+            #player { height: 50px; width: 50px; background-color: blue; position: absolute; }
+            .otherplayer { transition: 0.1s linear; }
         </style>
     </head>
-    <body onload="getPlayer()">
-        <script src="script.js"></script>
+    <body>
         <div id="player"></div>
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
+            import { getDatabase, ref, set, onDisconnect, onValue, onChildAdded, get, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyBdqoHJ58sFCcKpdHLw7mKUg_Bpi7xc7ok",
+                authDomain: "game-10962.firebaseapp.com",
+                databaseURL: "https://game-10962-default-rtdb.firebaseio.com",
+                projectId: "game-10962",
+                storageBucket: "game-10962.firebasestorage.app",
+                messagingSenderId: "817447482404",
+                appId: "1:817447482404:web:2cb0dd8608daf70197d4b1",
+                measurementId: "G-W44ZYYMKLX"
+            };
+
+            const app = initializeApp(firebaseConfig);
+            const database = getDatabase(app); 
+            let player = document.getElementById("player");
+            let speed = 3;
+            let keys = {};
+            let sendValue = 0;
+            let pos = { x: 0, y: 0 };
+            let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
+            let playerRef = ref(database, "players/" + playerID);
+            onDisconnect(playerRef).remove();
+
+            document.addEventListener("keydown", (event) => {
+                keys[event.key] = true;
+            });
+
+            document.addEventListener("keyup", (event) => {
+                delete keys[event.key];
+            });
+
+            function gameLoop() {
+                if (player) {
+                    if (keys['a']) { pos.x -= speed; }
+                    if (keys['w']) { pos.y -= speed; }
+                    if (keys['s']) { pos.y += speed; }
+                    if (keys['d']) { pos.x += speed; }
+
+                    if (sendValue >= 5) {
+                        sendValue = 0;
+                        set(playerRef, pos);
+                    }
+
+                    player.style.left = pos.x + "px";
+                    player.style.top = pos.y + "px";
+
+                    requestAnimationFrame(gameLoop);
+                    getPlayers();
+                    sendValue += 1;
+                }
+            }
+
+            function getPlayers() {
+                const playerRef = ref(database, 'players');
+                get(playerRef)
+                    .then((snapshot) => {
+                        if (snapshot.exists()) {
+                            const items = snapshot.val();
+                            console.log(items);
+                            for (let key in items) {
+                                const otherPlayer = items[key];
+                                if (key != playerID) {
+                                    let otherPlayerDiv = document.getElementById(key);
+                                    if (!otherPlayerDiv) {
+                                        otherPlayerDiv = document.createElement("div");
+                                        otherPlayerDiv.id = key;
+                                        otherPlayerDiv.classList.add("otherPlayer");
+                                        otherPlayerDiv.style.width = "50px";
+                                        otherPlayerDiv.style.height = "50px";
+                                        otherPlayerDiv.style.position = "absolute";
+                                        otherPlayerDiv.style.backgroundColor = "red";
+                                        document.body.appendChild(otherPlayerDiv);
+                                    }
+                                    otherPlayerDiv.style.left = otherPlayer.x + "px";
+                                    otherPlayerDiv.style.top = otherPlayer.y + "px";
+                                }
+                            }
+                        }
+                    });
+                onChildRemoved(playerRef, (snapshot) => {
+                    const playerId = snapshot.key;
+                    const otherPlayerDiv = document.getElementById(playerId);
+                    if (otherPlayerDiv) {
+                        otherPlayerDiv.remove();
+                    }
+                });
+            }
+
+            gameLoop();
+        </script>
     </body>
 </html>
+
