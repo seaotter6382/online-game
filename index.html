@@ -2,12 +2,14 @@
     <head>
         <title>online game</title>
         <style>
-            #player { height: 50px; width: 50px; background-color: blue; position: absolute; }
+            #player { height: 50px; width: 50px; background-color: blue; position: absolute; overflow: hidden; }
             .otherplayer { transition: 0.1s linear; }
+            input { position: absolute; }
         </style>
     </head>
     <body>
         <div id="player"></div>
+        <input id="input"></input>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
             import { getDatabase, ref, set, onDisconnect, onValue, onChildAdded, get, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
@@ -26,16 +28,24 @@
             const app = initializeApp(firebaseConfig);
             const database = getDatabase(app); 
             let player = document.getElementById("player");
+            let input = document.getElementById("input");
             let speed = 3;
             let keys = {};
+            let showInput = false;
             let sendValue = 0;
-            let pos = { x: 0, y: 0 };
+            let pos = { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50 };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
             onDisconnect(playerRef).remove();
 
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
+                if (event.key == "Enter") {
+                    showInput = !showInput;
+                    if (!showInput) {
+                        player.textContent = input.value;
+                    }
+                }
             });
 
             document.addEventListener("keyup", (event) => {
@@ -44,10 +54,12 @@
 
             function gameLoop() {
                 if (player) {
-                    if (keys['a']) { pos.x -= speed; }
-                    if (keys['w']) { pos.y -= speed; }
-                    if (keys['s']) { pos.y += speed; }
-                    if (keys['d']) { pos.x += speed; }
+                    if (!showInput) {
+                        if (keys['a']) { pos.x -= speed; }
+                        if (keys['w']) { pos.y -= speed; }
+                        if (keys['s']) { pos.y += speed; }
+                        if (keys['d']) { pos.x += speed; }
+                    }
 
                     if (sendValue >= 5) {
                         sendValue = 0;
@@ -57,9 +69,18 @@
                     player.style.left = pos.x + "px";
                     player.style.top = pos.y + "px";
 
+                    input.style.left = pos.x - 65;
+                    input.style.top = pos.y - 25;
+
                     requestAnimationFrame(gameLoop);
                     getPlayers();
                     sendValue += 1;
+                    if (showInput) {
+                        input.style.display = 'block';
+                        input.focus();
+                    } else {
+                        input.style.display = 'none';
+                    }
                 }
             }
 
