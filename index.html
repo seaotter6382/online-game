@@ -33,7 +33,7 @@
             let keys = {};
             let showInput = false;
             let sendValue = 0;
-            let pos = { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "" };
+            let pos = { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "", color: "red" };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
             onDisconnect(playerRef).remove();
@@ -53,6 +53,13 @@
                 delete keys[event.key];
             });
 
+            player.addEventListener("click", (event) => {
+                console.log("test");
+                let randomColor =  "#" + ((1 << 24) + (Math.floor(Math.random() * 256) << 16) + (Math.floor(Math.random() * 256) << 8) + Math.floor(Math.random() * 256)).toString(16).slice(1);
+                player.style.backgroundColor = randomColor;
+                pos.color = randomColor;
+            });
+
             function gameLoop() {
                 if (player) {
                     if (!showInput) {
@@ -60,11 +67,6 @@
                         if (keys['w']) { pos.y -= speed; }
                         if (keys['s']) { pos.y += speed; }
                         if (keys['d']) { pos.x += speed; }
-                    }
-
-                    if (sendValue >= 5) {
-                        sendValue = 0;
-                        set(playerRef, pos);
                     }
 
                     player.style.left = pos.x + "px";
@@ -75,7 +77,6 @@
 
                     requestAnimationFrame(gameLoop);
                     getPlayers();
-                    sendValue += 1;
                     if (showInput) {
                         input.style.display = 'block';
                         input.focus();
@@ -83,6 +84,11 @@
                         input.style.display = 'none';
                     }
                 }
+                if (sendValue >= 5) {
+                    sendValue = 0;
+                    set(playerRef, pos);
+                }
+                sendValue += 1;
             }
 
             function getPlayers() {
@@ -91,7 +97,6 @@
                     .then((snapshot) => {
                         if (snapshot.exists()) {
                             const items = snapshot.val();
-                            console.log(items);
                             for (let key in items) {
                                 const otherPlayer = items[key];
                                 if (key != playerID) {
@@ -104,7 +109,7 @@
                                         otherPlayerDiv.style.height = "50px";
                                         otherPlayerDiv.style.position = "absolute";
                                         otherPlayerDiv.textContent = otherPlayer.message;
-                                        otherPlayerDiv.style.backgroundColor = "red";
+                                        otherPlayerDiv.style.backgroundColor = otherPlayer.color;
                                         document.body.appendChild(otherPlayerDiv);
                                     }
                                     otherPlayerDiv.style.left = otherPlayer.x + "px";
@@ -113,14 +118,15 @@
                             }
                         }
                     });
-                onChildRemoved(playerRef, (snapshot) => {
-                    const playerId = snapshot.key;
-                    const otherPlayerDiv = document.getElementById(playerId);
-                    if (otherPlayerDiv) {
-                        otherPlayerDiv.remove();
-                    }
-                });
             }
+
+            onChildRemoved(playerRef, (snapshot) => {
+                const playerId = snapshot.key;
+                const otherPlayerDiv = document.getElementById(playerId);
+                if (otherPlayerDiv) {
+                    otherPlayerDiv.remove();
+                }
+            });
 
             gameLoop();
         </script>
