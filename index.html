@@ -4,15 +4,18 @@
         <style>
             #player { height: 50px; width: 50px; background-color: blue; position: absolute; overflow: hidden; }
             .otherplayer { transition: 0.1s linear; overflow: hidden; }
-            input { position: absolute; }
+            #chatArea { height: 400px; width: 350px; position: absolute; bottom: 10; }
+            input#chatInput { width: 100%; position: absolute; bottom: 0; }
         </style>
     </head>
     <body>
         <div id="player"></div>
-        <input id="input"></input>
+        <div id="chatArea">
+            <input id="chatInput" placeholder="enter a username"></input>
+        </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
-            import { getDatabase, ref, set, onDisconnect, onValue, onChildAdded, get, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
+            import { getDatabase, ref, set, onDisconnect, onValue, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
 
             const firebaseConfig = {
                 apiKey: "AIzaSyBdqoHJ58sFCcKpdHLw7mKUg_Bpi7xc7ok",
@@ -28,23 +31,34 @@
             const app = initializeApp(firebaseConfig);
             const database = getDatabase(app); 
             let player = document.getElementById("player");
-            let input = document.getElementById("input");
+            let input = document.getElementById("chatInput");
             let speed = 3;
             let keys = {};
-            let showInput = false;
             let sendValue = 0;
+            let showInput = false;
+            let enteredUser = false;
+            let username = "";
             let pos = { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "", color: "red" };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
+            let messageRef = ref(database, "messages/");
             onDisconnect(playerRef).remove();
 
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
                 if (event.key == "Enter") {
-                    showInput = !showInput;
-                    if (!showInput) {
-                        player.textContent = input.value;
-                        pos.message = input.value;
+                    if (showInput) {
+                        showInput = false;
+                        input.blur();
+                        sendMessage(input.value);
+                        if (!enteredUser) {
+                            username = input.value;
+                            enteredUser = true;
+                        }
+                        input.value = "";
+                    } else {
+                        showInput = true;
+                        input.focus();
                     }
                 }
             });
@@ -60,6 +74,8 @@
                 pos.color = randomColor;
             });
 
+            set(playerRef, null);
+
             function gameLoop() {
                 if (player) {
                     if (!showInput) {
@@ -72,17 +88,8 @@
                     player.style.left = pos.x + "px";
                     player.style.top = pos.y + "px";
 
-                    input.style.left = pos.x - 65;
-                    input.style.top = pos.y - 25;
-
                     requestAnimationFrame(gameLoop);
                     getPlayers();
-                    if (showInput) {
-                        input.style.display = 'block';
-                        input.focus();
-                    } else {
-                        input.style.display = 'none';
-                    }
                 }
                 if (sendValue >= 5) {
                     sendValue = 0;
@@ -125,6 +132,13 @@
                         otherPlayerDiv.remove();
                     }
                 });
+            }
+
+            function sendMessage(message) {
+                push(messageRef, {
+                    message: message
+                });
+                set(messageRef, null);
             }
 
             gameLoop();
