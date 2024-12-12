@@ -118,15 +118,14 @@
                             }
                         }
                     });
+                onChildRemoved(playerRef, (snapshot) => {
+                    const playerId = snapshot.key;
+                    const otherPlayerDiv = document.getElementById(playerId);
+                    if (otherPlayerDiv) {
+                        otherPlayerDiv.remove();
+                    }
+                });
             }
-
-            onChildRemoved(playerRef, (snapshot) => {
-                const playerId = snapshot.key;
-                const otherPlayerDiv = document.getElementById(playerId);
-                if (otherPlayerDiv) {
-                    otherPlayerDiv.remove();
-                }
-            });
 
             gameLoop();
         </script>
