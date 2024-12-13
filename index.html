@@ -6,6 +6,7 @@
             .otherplayer { transition: 0.1s linear; overflow: hidden; }
             #chatArea { height: 400px; width: 350px; position: absolute; bottom: 10; }
             input#chatInput { width: 100%; position: absolute; bottom: 0; }
+            #chatP { margin: 10px; }
         </style>
     </head>
     <body>
@@ -50,10 +51,12 @@
                     if (showInput) {
                         showInput = false;
                         input.blur();
-                        sendMessage(input.value);
                         if (!enteredUser) {
                             username = input.value;
                             enteredUser = true;
+                            input.placeholder = "enter a message";
+                        } else {
+                            sendMessage(username + ": " + input.value);
                         }
                         input.value = "";
                     } else {
@@ -139,6 +142,19 @@
                     message: message
                 });
                 set(messageRef, null);
+            }
+
+            onChildAdded(messageRef, (snapshot) => {
+                const messageData = snapshot.val();
+                console.log(messageData);
+                createText(messageData);
+            });
+
+            function createText(message) {
+                let newText = document.createElement("p");
+                newText.textContent = message.message;
+                newText.id = "chatP";
+                document.getElementById("chatArea").append(newText);
             }
 
             gameLoop();
