@@ -7,11 +7,21 @@
             #chatArea { height: 400px; width: 350px; position: absolute; bottom: 10; }
             #chatP { margin: 10px; }
             input#messageInput { position: absolute; }
+            #playerMessage { position: absolute; }
+            #invMain { height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray;}
+            #slot { height: 10%; width: 10%; background-color: rgb(187, 185, 185); margin: 10px;}
         </style>
     </head>
     <body>
+        <div id="playerContainer"></div>
         <div id="player"></div>
         <input id="messageInput" style="display: none;"></input>
+        <div id="messageContainer">
+            <p id="playerMessage"></p>
+        </div>
+        <div id="invMain" style="display: none;">
+            <h1>cool inventory</h1>
+        </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
             import { getDatabase, ref, set, onDisconnect, onValue, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
@@ -31,6 +41,8 @@
             const database = getDatabase(app); 
             let player = document.getElementById("player");
             let input = document.getElementById("messageInput");
+            let playerMessage = document.getElementById("playerMessage");
+            let invMain = document.getElementById("invMain");
             let speed = 3;
             let keys = {};
             let sendValue = 0;
@@ -43,6 +55,7 @@
             let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "", color: "red", angle: 0 };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
+            let playerRefA = ref(database, "players/");
             let messageRef = ref(database, "messages/");
             onDisconnect(playerRef).remove();
             pos.xSize = width;
@@ -54,14 +67,26 @@
                     if (!showInput) {
                         showInput = true;
                         input.style.display = 'block';
+                        playerMessage.style.display = 'none';
                         input.focus();
                     } else {
                         showInput = false;
+                        pos.message = input.value;
+                        playerMessage.textContent = input.value;
                         input.value = "";
                         input.style.display = 'none';
+                        playerMessage.style.display = 'block';
                     }
                 }
-            });
+                if (event.key == "Tab") {
+                    event.preventDefault();
+                    if (invMain.style.display == "none") {
+                        invMain.style.display = 'block';
+                    } else {
+                        invMain.style.display = 'none';
+                    }
+                }
+            })
 
             document.addEventListener('mousemove', function(event) {
                 let mouseX = event.clientX;
@@ -101,10 +126,13 @@
                     player.style.width = pos.xSize;
                     player.style.height = pos.ySize;
 
-                    requestAnimationFrame(gameLoop);
-                    getPlayers();
+                    playerMessage.style.left = pos.x - 75;
+                    playerMessage.style.top = pos.y - 75;
+
                     input.style.left = pos.x - 75;
                     input.style.top = pos.y - 75;
+                    requestAnimationFrame(gameLoop);
+                    getPlayers();
                 }
                 if (sendValue >= 5) {
                     sendValue = 0;
@@ -128,12 +156,14 @@
                                         otherPlayerDiv.id = key;
                                         otherPlayerDiv.classList.add("otherPlayer");
                                         otherPlayerDiv.style.position = "absolute";
-                                        document.body.appendChild(otherPlayerDiv);
+                                        document.getElementById("playerContainer").appendChild(otherPlayerDiv);
                                     }
                                     otherPlayerDiv.style.left = otherPlayer.x + "px";
                                     otherPlayerDiv.style.top = otherPlayer.y + "px";
                                     otherPlayerDiv.style.transform = `translate(-50%, -50%) rotate(${otherPlayer.angle}deg)`;
+
                                     otherPlayerDiv.textContent = otherPlayer.message;
+
                                     otherPlayerDiv.style.backgroundColor = otherPlayer.color;
                                     if (otherPlayer.xSize != null) {
                                         otherPlayerDiv.style.width = otherPlayer.xSize;
@@ -154,6 +184,7 @@
                 });
             }
 
+            set(playerRefA, null);
             gameLoop();
         </script>
     </body>
