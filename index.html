@@ -3,17 +3,15 @@
         <title>online game</title>
         <style>
             #player { height: 50px; width: 50px; background-color: blue; position: absolute; overflow: hidden; }
-            .otherplayer { transition: 0.1s linear; overflow: hidden; }
+            .otherplayer { transition: 0.1s linear; overflow: hidden; height: 50px; width: 50px;}
             #chatArea { height: 400px; width: 350px; position: absolute; bottom: 10; }
-            input#chatInput { width: 100%; position: absolute; bottom: 0; }
             #chatP { margin: 10px; }
+            input#messageInput { position: absolute; }
         </style>
     </head>
     <body>
         <div id="player"></div>
-        <div id="chatArea">
-            <input id="chatInput" placeholder="enter a username"></input>
-        </div>
+        <input id="messageInput" style="display: none;"></input>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
             import { getDatabase, ref, set, onDisconnect, onValue, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
@@ -32,38 +30,49 @@
             const app = initializeApp(firebaseConfig);
             const database = getDatabase(app); 
             let player = document.getElementById("player");
-            let input = document.getElementById("chatInput");
+            let input = document.getElementById("messageInput");
             let speed = 3;
             let keys = {};
             let sendValue = 0;
             let showInput = false;
+            const urlParams = new URLSearchParams(window.location.search);
+            const width = urlParams.get("width");
+            const height = urlParams.get("height");
             let enteredUser = false;
             let username = "";
-            let pos = { x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "", color: "red" };
+            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "", color: "red", angle: 0 };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
             let messageRef = ref(database, "messages/");
             onDisconnect(playerRef).remove();
+            pos.xSize = width;
+            pos.ySize = height;
 
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
                 if (event.key == "Enter") {
-                    if (showInput) {
-                        showInput = false;
-                        input.blur();
-                        if (!enteredUser) {
-                            username = input.value;
-                            enteredUser = true;
-                            input.placeholder = "enter a message";
-                        } else {
-                            sendMessage(username + ": " + input.value);
-                        }
-                        input.value = "";
-                    } else {
+                    if (!showInput) {
                         showInput = true;
+                        input.style.display = 'block';
                         input.focus();
+                    } else {
+                        showInput = false;
+                        input.value = "";
+                        input.style.display = 'none';
                     }
                 }
+            });
+
+            document.addEventListener('mousemove', function(event) {
+                let mouseX = event.clientX;
+                let mouseY = event.clientY;
+                let playerRect = player.getBoundingClientRect();
+                let playerCenterX = playerRect.left + playerRect.width / 2;
+                let playerCenterY = playerRect.top + playerRect.height / 2;
+                let angle = Math.atan2(mouseY - playerCenterY, mouseX - playerCenterX);
+                let angleInDegrees = angle * (180 / Math.PI);
+                pos.angle = angleInDegrees | 0;
+                player.style.transform = `translate(-50%, -50%) rotate(${angleInDegrees}deg)`;
             });
 
             document.addEventListener("keyup", (event) => {
@@ -71,7 +80,6 @@
             });
 
             player.addEventListener("click", (event) => {
-                console.log("test");
                 let randomColor =  "#" + ((1 << 24) + (Math.floor(Math.random() * 256) << 16) + (Math.floor(Math.random() * 256) << 8) + Math.floor(Math.random() * 256)).toString(16).slice(1);
                 player.style.backgroundColor = randomColor;
                 pos.color = randomColor;
@@ -81,7 +89,7 @@
 
             function gameLoop() {
                 if (player) {
-                    if (!showInput) {
+                    if (input.style.display == "none") {
                         if (keys['a']) { pos.x -= speed; }
                         if (keys['w']) { pos.y -= speed; }
                         if (keys['s']) { pos.y += speed; }
@@ -90,9 +98,13 @@
 
                     player.style.left = pos.x + "px";
                     player.style.top = pos.y + "px";
+                    player.style.width = pos.xSize;
+                    player.style.height = pos.ySize;
 
                     requestAnimationFrame(gameLoop);
                     getPlayers();
+                    input.style.left = pos.x - 75;
+                    input.style.top = pos.y - 75;
                 }
                 if (sendValue >= 5) {
                     sendValue = 0;
@@ -115,15 +127,20 @@
                                         otherPlayerDiv = document.createElement("div");
                                         otherPlayerDiv.id = key;
                                         otherPlayerDiv.classList.add("otherPlayer");
-                                        otherPlayerDiv.style.width = "50px";
-                                        otherPlayerDiv.style.height = "50px";
                                         otherPlayerDiv.style.position = "absolute";
-                                        otherPlayerDiv.textContent = otherPlayer.message;
-                                        otherPlayerDiv.style.backgroundColor = otherPlayer.color;
                                         document.body.appendChild(otherPlayerDiv);
                                     }
                                     otherPlayerDiv.style.left = otherPlayer.x + "px";
                                     otherPlayerDiv.style.top = otherPlayer.y + "px";
+                                    otherPlayerDiv.style.transform = `translate(-50%, -50%) rotate(${otherPlayer.angle}deg)`;
+                                    otherPlayerDiv.textContent = otherPlayer.message;
+                                    otherPlayerDiv.style.backgroundColor = otherPlayer.color;
+                                    if (otherPlayer.xSize != null) {
+                                        otherPlayerDiv.style.width = otherPlayer.xSize;
+                                    }
+                                    if (otherPlayer.ySize != null) {
+                                        otherPlayerDiv.style.height = otherPlayer.ySize;
+                                    }
                                 }
                             }
                         }
@@ -135,26 +152,6 @@
                         otherPlayerDiv.remove();
                     }
                 });
-            }
-
-            function sendMessage(message) {
-                push(messageRef, {
-                    message: message
-                });
-                set(messageRef, null);
-            }
-
-            onChildAdded(messageRef, (snapshot) => {
-                const messageData = snapshot.val();
-                console.log(messageData);
-                createText(messageData);
-            });
-
-            function createText(message) {
-                let newText = document.createElement("p");
-                newText.textContent = message.message;
-                newText.id = "chatP";
-                document.getElementById("chatArea").append(newText);
             }
 
             gameLoop();
