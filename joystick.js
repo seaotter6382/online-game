@@ -18,7 +18,7 @@ function __init_joystick_div() {
     document.body.appendChild(JOYSTICK_DIV);
 }
 
-var JOYSTICK_RADIUS = Math.min(window.innerWidth, window.innerHeight) / 5; 
+var JOYSTICK_RADIUS = Math.min(window.innerWidth, window.innerHeight) / 5;  
 
 var JoyStick = function(attrs) {
     this.radius = attrs.radius || JOYSTICK_RADIUS; 
@@ -91,8 +91,8 @@ JoyStick.prototype.__create_fullscreen_div = function() {
     div_style.width = this.radius * 2 + 'px';
     div_style.height = this.radius * 2 + 'px';
     div_style.position = 'absolute';
-    div_style.left = '10px'; 
-    div_style.bottom = '10px'; 
+    div_style.left = this.x - this.radius + 'px';
+    div_style.top = this.y - this.radius + 'px'; 
     div_style.borderRadius = '50%';
     div_style.borderColor = 'rgba(200,200,200,0.5)';
     div_style.borderWidth = '1px';
@@ -115,11 +115,27 @@ JoyStick.prototype.__create_fullscreen_div = function() {
 
     var self = this;
 
+    var dragging = false;
+    var offsetX, offsetY;
+
     function touch_hander(evt) {
-        evt.preventDefault(); 
+        evt.preventDefault();
+
         var touch_obj = evt.changedTouches ? evt.changedTouches[0] : evt;
-        self.control.style.left = touch_obj.clientX - self.inner_radius + 'px';
-        self.control.style.top = touch_obj.clientY - self.inner_radius + 'px';
+        if (!dragging) {
+            dragging = true;
+            offsetX = touch_obj.clientX - self.x;
+            offsetY = touch_obj.clientY - self.y;
+        }
+
+        self.x = touch_obj.clientX - offsetX;
+        self.y = touch_obj.clientY - offsetY;
+
+        div_style.left = self.x - self.radius + 'px';
+        div_style.top = self.y - self.radius + 'px';
+
+        self.control.style.left = self.x - self.inner_radius + 'px';
+        self.control.style.top = self.y - self.inner_radius + 'px';
 
         var dx = touch_obj.clientX - self.x;
         var dy = touch_obj.clientY - self.y;
@@ -129,24 +145,18 @@ JoyStick.prototype.__create_fullscreen_div = function() {
         self.right = self.__is_right(dx, dy);
     }
 
-    function clear_flags() {
-        self.left = false;
-        self.right = false;
-        self.up = false;
-        self.down = false;
-
-        self.control.style.top = self.y - self.inner_radius + 'px';
-        self.control.style.left = self.x - self.inner_radius + 'px';
+    function stop_drag(evt) {
+        dragging = false;
     }
 
     this.bind('touchmove', touch_hander);
     this.bind('touchstart', touch_hander);
-    this.bind('touchend', clear_flags);
+    this.bind('touchend', stop_drag);
 
     if (this.mouse_support) {
         this.bind('mousedown', touch_hander);
         this.bind('mousemove', touch_hander);
-        this.bind('mouseup', clear_flags);
+        this.bind('mouseup', stop_drag);
     }
 };
 
