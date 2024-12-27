@@ -2,6 +2,7 @@
     <head>
         <title>online game</title>
         <style>
+            html { overflow: hidden; }
             #player { height: 50px; width: 50px; background-color: blue; position: absolute; overflow: hidden; }
             .otherplayer { transition: 0.1s linear; overflow: hidden; height: 50px; width: 50px;}
             #chatArea { height: 400px; width: 350px; position: absolute; bottom: 10; }
@@ -11,8 +12,10 @@
             #invMain { height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray;}
             #slot { height: 10%; width: 10%; background-color: rgb(187, 185, 185); margin: 10px;}
         </style>
+        <script src="joystick.js"></script>
     </head>
     <body>
+        <p id="cords"></p>
         <div id="playerContainer"></div>
         <div id="player"></div>
         <input id="messageInput" style="display: none;"></input>
@@ -43,6 +46,7 @@
             let input = document.getElementById("messageInput");
             let playerMessage = document.getElementById("playerMessage");
             let invMain = document.getElementById("invMain");
+            let cordsText = document.getElementById("cords");
             let speed = 3;
             let keys = {};
             let sendValue = 0;
@@ -50,6 +54,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const width = urlParams.get("width");
             const height = urlParams.get("height");
+            const speedURL = urlParams.get("speed");
             let enteredUser = false;
             let username = "";
             let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "", color: "red", angle: 0 };
@@ -60,6 +65,22 @@
             onDisconnect(playerRef).remove();
             pos.xSize = width;
             pos.ySize = height;
+
+            if (speedURL != null) {
+                speed = Number(speedURL);
+            }
+
+            let worldX = 0;
+            let worldY = 0;
+
+            if (deviceCheck() ? "Mobile" : "Desktop" == "Mobile") {
+                var joystick = new JoyStick({
+                	radius: 80,
+	                x: window.innerWidth / 2,
+	                y: window.innerHeight /2,
+	                inner_radius: 70,
+                });
+            }
 
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
@@ -112,17 +133,20 @@
 
             set(playerRef, null);
 
+            player.style.left = pos.x + "px";
+            player.style.top = pos.y + "px";
+
             function gameLoop() {
                 if (player) {
                     if (input.style.display == "none") {
-                        if (keys['a']) { pos.x -= speed; }
-                        if (keys['w']) { pos.y -= speed; }
-                        if (keys['s']) { pos.y += speed; }
-                        if (keys['d']) { pos.x += speed; }
+                        if (keys['a']) { worldX += speed; pos.x -= speed; }
+                        if (keys['w']) { worldY += speed; pos.y -= speed; }
+                        if (keys['s']) { worldY -= speed; pos.y += speed; }
+                        if (keys['d']) { worldX -= speed; pos.x += speed; }
                     }
 
-                    player.style.left = pos.x + "px";
-                    player.style.top = pos.y + "px";
+                    cordsText.textContent = "cords: " + worldX + ", " + worldY;
+
                     player.style.width = pos.xSize;
                     player.style.height = pos.ySize;
 
@@ -139,6 +163,13 @@
                     set(playerRef, pos);
                 }
                 sendValue += 1;
+
+                if (deviceCheck() ? "Mobile" : "Desktop" == "Mobile") {
+                    if (joystick.up) worldY += speed; pos.y -= speed;
+                    if (joystick.down) worldY -= speed; pos.y += speed; 
+                    if (joystick.left) worldX += speed; pos.y -= speed;
+                    if (joystick.right) worldX -= speed; pos.y += speed; 
+                }
             }
 
             function getPlayers() {
@@ -158,8 +189,8 @@
                                         otherPlayerDiv.style.position = "absolute";
                                         document.getElementById("playerContainer").appendChild(otherPlayerDiv);
                                     }
-                                    otherPlayerDiv.style.left = otherPlayer.x + "px";
-                                    otherPlayerDiv.style.top = otherPlayer.y + "px";
+                                    otherPlayerDiv.style.left = worldX + otherPlayer.x + "px";
+                                    otherPlayerDiv.style.top = worldY + otherPlayer.y + "px";
                                     otherPlayerDiv.style.transform = `translate(-50%, -50%) rotate(${otherPlayer.angle}deg)`;
 
                                     otherPlayerDiv.textContent = otherPlayer.message;
@@ -182,6 +213,10 @@
                         otherPlayerDiv.remove();
                     }
                 });
+            }
+
+            function deviceCheck() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             }
 
             set(playerRefA, null);
