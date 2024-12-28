@@ -8,7 +8,6 @@
             #chatArea { height: 400px; width: 350px; position: absolute; bottom: 10; }
             #chatP { margin: 10px; }
             input#messageInput { position: absolute; }
-            #playerMessage { position: absolute; }
             #invMain { height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray;}
             #slot { height: 50px; width: 50px; background-color: rgb(187, 185, 185); margin: 10px;}
         </style>
@@ -18,9 +17,6 @@
         <div id="playerContainer"></div>
         <div id="player"></div>
         <input id="messageInput" style="display: none;"></input>
-        <div id="messageContainer">
-            <p id="playerMessage"></p>
-        </div>
         <div id="invMain" style="display: none;">
             <h1>cool inventory</h1>
         </div>
@@ -43,7 +39,6 @@
             const database = getDatabase(app); 
             let player = document.getElementById("player");
             let input = document.getElementById("messageInput");
-            let playerMessage = document.getElementById("playerMessage");
             let invMain = document.getElementById("invMain");
             let cordsText = document.getElementById("cords");
             let speed = 3;
@@ -65,28 +60,26 @@
             pos.xSize = width;
             pos.ySize = height;
 
+            let worldX = 0;
+            let worldY = 0;
+            
             if (speedURL != null) {
                 speed = Number(speedURL);
             }
-
-            let worldX = 0;
-            let worldY = 0;
-
+            
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
                 if (event.key == "Enter") {
                     if (!showInput) {
                         showInput = true;
                         input.style.display = 'block';
-                        playerMessage.style.display = 'none';
                         input.focus();
                     } else {
                         showInput = false;
                         pos.message = input.value;
-                        playerMessage.textContent = input.value;
+                        player.textContent = input.value;
                         input.value = "";
                         input.style.display = 'none';
-                        playerMessage.style.display = 'block';
                     }
                 }
                 if (event.key == "Tab") {
@@ -140,11 +133,6 @@
                     player.style.width = pos.xSize;
                     player.style.height = pos.ySize;
 
-                    playerMessage.style.left = pos.x - 75;
-                    playerMessage.style.top = pos.y - 75;
-
-                    input.style.left = pos.x - 75;
-                    input.style.top = pos.y - 75;
                     requestAnimationFrame(gameLoop);
                     getPlayers();
                 }
