@@ -10,7 +10,7 @@
             input#messageInput { position: absolute; }
             #playerMessage { position: absolute; }
             #invMain { height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray;}
-            #slot { height: 10%; width: 10%; background-color: rgb(187, 185, 185); margin: 10px;}
+            #slot { height: 50px; width: 50px; background-color: rgb(187, 185, 185); margin: 10px;}
         </style>
         <script src="joystick.js"></script>
     </head>
@@ -72,15 +72,6 @@
 
             let worldX = 0;
             let worldY = 0;
-
-            if (deviceCheck() ? "Mobile" : "Desktop" == "Mobile") {
-                var joystick = new JoyStick({
-                	radius: 80,
-	                x: window.innerWidth / 2,
-	                y: window.innerHeight /2,
-	                inner_radius: 70,
-                });
-            }
 
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
@@ -163,13 +154,6 @@
                     set(playerRef, pos);
                 }
                 sendValue += 1;
-
-                if (deviceCheck() ? "Mobile" : "Desktop" == "Mobile") {
-                    if (joystick.up) worldY += speed; pos.y -= speed;
-                    if (joystick.down) worldY -= speed; pos.y += speed; 
-                    if (joystick.left) worldX += speed; pos.y -= speed;
-                    if (joystick.right) worldX -= speed; pos.y += speed; 
-                }
             }
 
             function getPlayers() {
