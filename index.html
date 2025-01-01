@@ -8,20 +8,29 @@
             #chatArea { height: 400px; width: 350px; position: absolute; bottom: 10; }
             #chatP { margin: 10px; }
             input#messageInput { position: absolute; }
-            #invMain { height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray;}
-            #slot { height: 50px; width: 50px; background-color: rgb(187, 185, 185); margin: 10px;}
-            #online-text { position: absolute; margin-top: 0px;}
-            #cords { margin-bottom: 0px;}
+            #invMain { height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray; }
+            #slot { height: 50px; width: 50px; background-color: rgb(187, 185, 185); margin: 10px; }
+            #online-text { position: absolute; margin-top: 0px; }
+            #cords { margin-bottom: 0px; }
+            #usernameInput { margin-bottom: 10px; }
+            #usernamePopup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
         </style>
     </head>
     <body>
-        <p id="cords"></p>
-        <p id="online-text"></p>
-        <div id="playerContainer"></div>
-        <div id="player"></div>
-        <input id="messageInput" style="display: none;"></input>
-        <div id="invMain" style="display: none;">
-            <h1>cool inventory</h1>
+        <div id="usernamePopup">
+            <h1>enter your username</h1>
+            <input placeholder="username" id="usernameInput"></input><br>
+            <button id="usernameButton">submit</button>
+        </div>
+        <div style="display: none;" id="main">
+            <p id="cords"></p>
+            <p id="online-text"></p>
+            <div id="playerContainer"></div>
+            <div id="player"></div>
+            <input id="messageInput" style="display: none;"></input>
+            <div id="invMain" style="display: none;">
+                <h1>cool inventory</h1>
+           </div>
         </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
@@ -54,8 +63,7 @@
             const height = urlParams.get("height");
             const speedURL = urlParams.get("speed");
             let enteredUser = false;
-            let username = "";
-            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "", color: "red", angle: 0 };
+            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "", username: "cool username", color: "red", angle: 0 };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
             let playerRefA = ref(database, "players/");
@@ -70,7 +78,26 @@
             if (speedURL != null) {
                 speed = Number(speedURL);
             }
-            
+
+            document.getElementById("usernameButton").addEventListener("click", () => {
+                if (document.getElementById("usernameInput").value == "") {
+                    return;
+                }
+                pos.username = document.getElementById("usernameInput").value;
+                document.getElementById("usernamePopup").style.display = "none";
+                gameLoop();
+                setInterval(getOnlinePlayers, 100);
+                document.getElementById("main").style.display = "block";
+                let playerUsername = document.createElement("p");
+                playerUsername.textContent = pos.username;
+                playerUsername.style.position = "absolute";
+                playerUsername.style.top = window.innerHeight / 100 * 35 + "px";
+                playerUsername.style.width = window.innerWidth - 75 + "px";
+                playerUsername.style.textAlign = "center";
+                playerUsername.style.fontWeight = "bold";
+                document.body.appendChild(playerUsername);
+            });
+
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
                 if (event.key == "Enter") {
@@ -156,6 +183,18 @@
                                 const otherPlayer = items[key];
                                 if (key != playerID) {
                                     let otherPlayerDiv = document.getElementById(key);
+                                    let otherPlayerUsername = document.getElementById(key + "username");
+                                    if (!otherPlayerUsername) {
+                                        otherPlayerUsername = document.createElement("p");
+                                        otherPlayerUsername.id = key + "username";
+                                        otherPlayerUsername.style.width = "500px";
+                                        otherPlayerUsername.style.textAlign = "center";
+                                        otherPlayerUsername.style.position = "absolute";
+                                        otherPlayerUsername.style.fontWeight = "bold";
+                                        otherPlayerUsername.style.transition = "0.1s linear";
+                                        otherPlayerUsername.style.zIndex = 100;
+                                        document.getElementById("playerContainer").appendChild(otherPlayerUsername);
+                                    }
                                     if (!otherPlayerDiv) {
                                         otherPlayerDiv = document.createElement("div");
                                         otherPlayerDiv.id = key;
@@ -168,6 +207,10 @@
                                     otherPlayerDiv.style.transform = `translate(-50%, -50%) rotate(${otherPlayer.angle}deg)`;
 
                                     otherPlayerDiv.textContent = otherPlayer.message;
+                                    
+                                    otherPlayerUsername.textContent = otherPlayer.username;
+                                    otherPlayerUsername.style.left = worldX + otherPlayer.x + otherPlayerDiv.offsetWidth / 2 - otherPlayerUsername.offsetWidth / 2 - 25 +"px";
+                                    otherPlayerUsername.style.top = worldY + otherPlayer.y - 75 + "px";
 
                                     otherPlayerDiv.style.backgroundColor = otherPlayer.color;
                                     if (otherPlayer.xSize != null) {
@@ -183,8 +226,10 @@
                 onChildRemoved(playerRef, (snapshot) => {
                     const playerId = snapshot.key;
                     const otherPlayerDiv = document.getElementById(playerId);
-                    if (otherPlayerDiv) {
+                    const otherPlayerUsername = document.getElementById(playerId + "username");
+                    if (otherPlayerDiv && otherPlayerUsername) {
                         otherPlayerDiv.remove();
+                        otherPlayerUsername.remove();
                     }
                 });
             }
@@ -198,11 +243,7 @@
                     }
                 });
             }
-
-            setInterval(getOnlinePlayers, 100);
-
             set(playerRefA, null);
-            gameLoop();
         </script>
     </body>
 </html>
