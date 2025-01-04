@@ -3,40 +3,50 @@
         <title>online game</title>
         <style>
             html { overflow: hidden; }
-            #player { height: 50px; width: 50px; background-color: blue; position: absolute; overflow: hidden; }
+            #player { height: 50px; width: 50px; background-color: blue; position: absolute; }
             .otherplayer { transition: 0.1s linear; overflow: hidden; height: 50px; width: 50px;}
-            #chatArea { height: 400px; width: 350px; position: absolute; bottom: 10px; }
-            #chatP { margin: 10px; }
-            input#messageInput { position: absolute; }
+            #chatArea { height: 400px; width: 350px; bottom: 40; overflow: hidden; position: absolute; }
+            #messageInput { box-sizing: border-box; position: absolute; bottom: 10; width: 350px; }
             #invMain { z-index: 1000; height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray; }
-            #slot { height: 50px; width: 50px; background-color: rgb(187, 185, 185); margin: 10px; }
-            #online-text { position: absolute; margin-top: 0px; }
+            .slot { font-weight: bold; position: absolute; bottom: 10; height: 50px; width: 50px; background-color: rgb(187, 185, 185); margin: 10px; }
+            #online-text { position: sticky; margin-top: 0px; }
             #cords { margin-bottom: 0px; }
             #usernameInput { margin-bottom: 10px; }
             #usernamePopup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+            #playerMessage { margin: 5px; }
+            #wall { height: 100px; width: 100px; background-color: rgb(165, 91, 42); position: absolute; }
         </style>
     </head>
-    <body>
+    <body>      
         <div id="usernamePopup">
-            <p>version 0.1</p>
+            <p>version 0.2</p>
             <h1>enter your username</h1>
             <input placeholder="username" id="usernameInput"></input><br>
             <button id="usernameButton">submit</button>
         </div>
         <div style="display: none;" id="main">
             <p id="cords"></p>
-            <p id="online-text"></p>
+            <p id="online-text">online players: 0</p>
             <div id="playerContainer"></div>
             <div id="player"></div>
-            <input id="messageInput" style="display: none;"></input>
             <div id="invMain" style="display: none;">
-                <h1>inventory</h1>
-           </div>
+                <h1 style="text-align: center;">inventory</h1>
+            </div>
+            <div id="chatArea">
+            </div>
+            <input id="messageInput" placeholder="press enter to message" maxlength="50"></input>
+            <div id="slots">
+                <div class="slot" id="slot-1">1</div>
+                <div class="slot" id="slot-2">2</div>
+                <div class="slot" id="slot-3">3</div>
+                <div class="slot" id="slot-4">4</div>
+                <div class="slot" id="slot-5">5</div>
+            </div>
+            <div id="wall"></div>
         </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
             import { getDatabase, ref, set, onDisconnect, onValue, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
-
             const firebaseConfig = {
                 apiKey: "AIzaSyBdqoHJ58sFCcKpdHLw7mKUg_Bpi7xc7ok",
                 authDomain: "game-10962.firebaseapp.com",
@@ -47,7 +57,6 @@
                 appId: "1:817447482404:web:2cb0dd8608daf70197d4b1",
                 measurementId: "G-W44ZYYMKLX"
             };
-
             const app = initializeApp(firebaseConfig);
             const database = getDatabase(app);
             let player = document.getElementById("player");
@@ -72,13 +81,43 @@
             onDisconnect(playerRef).remove();
             pos.xSize = width;
             pos.ySize = height;
-
             let worldX = 0;
             let worldY = 0;
-
             if (speedURL != null) {
                 speed = Number(speedURL);
             }
+
+            let currentSlot = 1;
+
+            let slots = document.getElementsByClassName("slot");
+            console.log(slots);
+
+            slots[0].style.left = window.innerWidth / 2 - 155 + "px";
+            slots[1].style.left = window.innerWidth / 2 - 95 + "px";
+            slots[2].style.left = window.innerWidth / 2 - 35 + "px";
+            slots[3].style.left = window.innerWidth / 2 + 25 + "px";
+            slots[4].style.left = window.innerWidth / 2 + 85 + "px";
+
+            wall = document.getElementById("wall");
+            
+            function updateSlotColors() {
+                for (let i = 0; i < slots.length; i++) {
+                    if (i + 1 === currentSlot) {
+                        slots[i].style.backgroundColor = "rgb(100, 100, 100)";
+                    } else {
+                        slots[i].style.backgroundColor = "rgb(187, 185, 185)";
+                    }
+                }
+            }
+
+            for (let i = 0; i < slots.length; i++) {
+                slots[i].addEventListener("click", () => {
+                    currentSlot = i + 1;
+                    updateSlotColors();
+                });
+            }
+
+            updateSlotColors();
 
             document.getElementById("usernameButton").addEventListener("click", () => {
                 if (document.getElementById("usernameInput").value == "") {
@@ -92,26 +131,30 @@
                 let playerUsername = document.createElement("p");
                 playerUsername.textContent = pos.username;
                 playerUsername.style.position = "absolute";
-                playerUsername.style.top = window.innerHeight / 100 * 35 + "px";
+                playerUsername.style.top = window.innerHeight / 2 - 125 + "px";
                 playerUsername.style.width = window.innerWidth - 75 + "px";
                 playerUsername.style.textAlign = "center";
                 playerUsername.style.fontWeight = "bold";
                 document.body.appendChild(playerUsername);
             });
-
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
-                if (event.key == "Enter") {
-                    if (!showInput) {
-                        showInput = true;
-                        input.style.display = 'block';
+                if (event.key == "Enter") {     
+                    if (document.activeElement !== input) {
                         input.focus();
                     } else {
-                        showInput = false;
                         pos.message = input.value;
-                        player.textContent = input.value;
+                        if (input.value != "") {
+                            push(messageRef, {
+                                username: pos.username,
+                                message: pos.message,
+                                color: pos.color,
+                                timestamp: Date.now()
+                            });
+                        }
+                        set(messageRef, null);
                         input.value = "";
-                        input.style.display = 'none';
+                        input.blur();
                     }
                 }
                 if (event.key == "Tab") {
@@ -123,7 +166,6 @@
                     }
                 }
             })
-
             document.addEventListener('mousemove', function(event) {
                 let mouseX = event.clientX;
                 let mouseY = event.clientY;
@@ -135,37 +177,38 @@
                 pos.angle = angleInDegrees | 0;
                 player.style.transform = `translate(-50%, -50%) rotate(${angleInDegrees}deg)`;
             });
-
             document.addEventListener("keyup", (event) => {
                 delete keys[event.key];
             });
-
             player.addEventListener("click", (event) => {
                 let randomColor =  "#" + ((1 << 24) + (Math.floor(Math.random() * 256) << 16) + (Math.floor(Math.random() * 256) << 8) + Math.floor(Math.random() * 256)).toString(16).slice(1);
                 player.style.backgroundColor = randomColor;
                 pos.color = randomColor;
             });
-
-            set(playerRef, null);
-
+            set(playerRefA, null);
             player.style.left = pos.x + "px";
             player.style.top = pos.y + "px";
-
             function gameLoop() {
                 if (player) {
-                    if (input.style.display == "none") {
-                        if (keys['a']) { worldX += speed; pos.x -= speed; }
-                        if (keys['w']) { worldY += speed; pos.y -= speed; }
-                        if (keys['s']) { worldY -= speed; pos.y += speed; }
-                        if (keys['d']) { worldX -= speed; pos.x += speed; }
-                    }                    
+                    if (document.activeElement !== input) {
+                        if (keys['a']) { worldX = Math.min(worldX + speed, 1000); pos.x -= speed; }
+                        if (keys['w']) { worldY = Math.min(worldY + speed, 1000); pos.y -= speed; }
+                        if (keys['s']) { worldY = Math.max(worldY - speed, -1000); pos.y += speed; }
+                        if (keys['d']) { worldX = Math.max(worldX - speed, -1000); pos.x += speed; }
+                        if (keys['1']) { currentSlot = 1; }
+                        if (keys['2']) { currentSlot = 2; }
+                        if (keys['3']) { currentSlot = 3; }
+                        if (keys['4']) { currentSlot = 4; }
+                        if (keys['5']) { currentSlot = 5; }
+                    } 
                     cordsText.textContent = "cords: " + worldX + ", " + worldY;
-
                     player.style.width = pos.xSize;
                     player.style.height = pos.ySize;
-
+                    wall.style.left = worldX + 500 + "px";
+                    wall.style.top = worldY + 500 + "px";
                     requestAnimationFrame(gameLoop);
                     getPlayers();
+                    updateSlotColors();
                 }
                 if (sendValue >= 5) {
                     sendValue = 0;
@@ -173,7 +216,19 @@
                 }
                 sendValue += 1;
             }
-
+            onChildAdded(messageRef, (snapshot) => {
+                const message = snapshot.val();
+                const messageElement = document.createElement("p");
+                messageElement.id = "playerMessage";
+                if (message.color != "red") {
+                    messageElement.style.color = message.color;
+                }
+                messageElement.textContent = `${message.username}: ${message.message}`;
+                const chatArea = document.getElementById("chatArea");
+                const inputElement = document.getElementById("messageInput");
+                chatArea.appendChild(messageElement);
+                chatArea.scrollTop = chatArea.scrollHeight;
+            });
             function getPlayers() {
                 const playerRef = ref(database, 'players');
                 get(playerRef)
@@ -206,13 +261,9 @@
                                     otherPlayerDiv.style.left = worldX + otherPlayer.x + "px";
                                     otherPlayerDiv.style.top = worldY + otherPlayer.y + "px";
                                     otherPlayerDiv.style.transform = `translate(-50%, -50%) rotate(${otherPlayer.angle}deg)`;
-
-                                    otherPlayerDiv.textContent = otherPlayer.message;
-                                    
                                     otherPlayerUsername.textContent = otherPlayer.username;
-                                    otherPlayerUsername.style.left = worldX + otherPlayer.x + otherPlayerDiv.offsetWidth / 2 - otherPlayerUsername.offsetWidth / 2 - 25 +"px";
+                                    otherPlayerUsername.style.left = worldX + otherPlayer.x + otherPlayerDiv.offsetWidth / 2 - otherPlayerUsername.offsetWidth / 2 - 25 + "px";
                                     otherPlayerUsername.style.top = worldY + otherPlayer.y - 75 + "px";
-
                                     otherPlayerDiv.style.backgroundColor = otherPlayer.color;
                                     if (otherPlayer.xSize != null) {
                                         otherPlayerDiv.style.width = otherPlayer.xSize;
@@ -234,7 +285,6 @@
                     }
                 });
             }
-
             function getOnlinePlayers() {
                 get(playerRefA).then((snapshot) => {
                     if (snapshot.exists()) {
