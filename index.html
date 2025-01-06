@@ -8,7 +8,7 @@
             #chatArea { height: 400px; width: 350px; bottom: 40; overflow: hidden; position: absolute; }
             #messageInput { box-sizing: border-box; position: absolute; bottom: 10; width: 350px; }
             #invMain { z-index: 1000; height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray; }
-            .slot { font-weight: bold; position: absolute; bottom: 10; height: 50px; width: 50px; background-color: rgb(187, 185, 185); margin: 10px; }
+            .slot { font-size: 18px; font-weight: bold; position: absolute; bottom: 10; height: 60px; width: 60px; background-color: rgb(187, 185, 185); margin: 10px; }
             #online-text { position: sticky; margin-top: 0px; }
             #cords { margin-bottom: 0px; }
             #usernameInput { margin-bottom: 10px; }
@@ -32,8 +32,7 @@
             <div id="invMain" style="display: none;">
                 <h1 style="text-align: center;">inventory</h1>
             </div>
-            <div id="chatArea">
-            </div>
+            <div id="chatArea"></div>
             <input id="messageInput" placeholder="press enter to message" maxlength="50"></input>
             <div id="slots">
                 <div class="slot" id="slot-1">1</div>
@@ -73,7 +72,7 @@
             const height = urlParams.get("height");
             const speedURL = urlParams.get("speed");
             let enteredUser = false;
-            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, message: "", username: "", color: "red", angle: 0 };
+            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, username: "", color: "red", angle: 0 };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
             let playerRefA = ref(database, "players/");
@@ -92,11 +91,11 @@
             let slots = document.getElementsByClassName("slot");
             console.log(slots);
 
-            slots[0].style.left = window.innerWidth / 2 - 155 + "px";
-            slots[1].style.left = window.innerWidth / 2 - 95 + "px";
-            slots[2].style.left = window.innerWidth / 2 - 35 + "px";
+            slots[0].style.left = window.innerWidth / 2 - 185 + "px";
+            slots[1].style.left = window.innerWidth / 2 - 115 + "px";
+            slots[2].style.left = window.innerWidth / 2 - 45 + "px";
             slots[3].style.left = window.innerWidth / 2 + 25 + "px";
-            slots[4].style.left = window.innerWidth / 2 + 85 + "px";
+            slots[4].style.left = window.innerWidth / 2 + 95 + "px";
 
             let wall = document.getElementById("wall");
             
@@ -123,6 +122,12 @@
                 if (document.getElementById("usernameInput").value == "") {
                     return;
                 }
+                push(messageRef, {
+                    username: "System",
+                    message: document.getElementById("usernameInput").value + " has joined the game",
+                    color: pos.color
+                });
+                set(messageRef, null);
                 pos.username = document.getElementById("usernameInput").value;
                 document.getElementById("usernamePopup").style.display = "none";
                 gameLoop();
@@ -143,13 +148,11 @@
                     if (document.activeElement !== input) {
                         input.focus();
                     } else {
-                        pos.message = input.value;
                         if (input.value != "") {
                             push(messageRef, {
                                 username: pos.username,
-                                message: pos.message,
-                                color: pos.color,
-                                timestamp: Date.now()
+                                message: input.value,
+                                color: pos.color
                             });
                         }
                         set(messageRef, null);
@@ -191,10 +194,10 @@
             function gameLoop() {
                 if (player) {
                     if (document.activeElement !== input) {
-                        if (keys['a']) { worldX = Math.min(worldX + speed, 1000); pos.x -= speed; }
-                        if (keys['w']) { worldY = Math.min(worldY + speed, 1000); pos.y -= speed; }
-                        if (keys['s']) { worldY = Math.max(worldY - speed, -1000); pos.y += speed; }
-                        if (keys['d']) { worldX = Math.max(worldX - speed, -1000); pos.x += speed; }
+                        if (keys['a']) { worldX = Math.min(worldX + speed, 5000); pos.x = Math.max(pos.x - speed, -5000); }
+                        if (keys['w']) { worldY = Math.min(worldY + speed, 5000); pos.y = Math.max(pos.y - speed, -5000); }
+                        if (keys['s']) { worldY = Math.max(worldY - speed, -5000); pos.y = Math.min(pos.y + speed, 5000); }
+                        if (keys['d']) { worldX = Math.max(worldX - speed, -5000); pos.x = Math.min(pos.x + speed, 5000); }
                         if (keys['1']) { currentSlot = 1; }
                         if (keys['2']) { currentSlot = 2; }
                         if (keys['3']) { currentSlot = 3; }
@@ -222,6 +225,10 @@
                 messageElement.id = "playerMessage";
                 if (message.color != "red") {
                     messageElement.style.color = message.color;
+                }
+                if (message.username == "System") {
+                    messageElement.style.fontStyle = "italic";
+                    messageElement.style.color = "gray";
                 }
                 messageElement.textContent = `${message.username}: ${message.message}`;
                 const chatArea = document.getElementById("chatArea");
