@@ -9,24 +9,28 @@
             #messageInput { box-sizing: border-box; position: absolute; bottom: 10; width: 350px; }
             #invMain { z-index: 1000; height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray; }
             .slot { font-size: 18px; font-weight: bold; position: absolute; bottom: 10; height: 60px; width: 60px; background-color: rgb(187, 185, 185); margin: 10px; }
-            #online-text { position: sticky; margin-top: 0px; }
+            #online-text { position: sticky; margin: 0px; }
             #cords { margin-bottom: 0px; }
             #usernameInput { margin-bottom: 10px; }
             #usernamePopup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
             #playerMessage { margin: 5px; }
-            #wall { height: 100px; width: 100px; background-color: rgb(165, 91, 42); position: absolute; }
+            #wall { transition: 0.1s linear; height: 100px; width: 100px; background-color: rgb(165, 91, 42); position: absolute; }
+            #block { transition: 0.1s linear; }
+            #hover { position: absolute; height: 50px; width: 50px; background-color: rgba(83, 83, 83, 0.5); }
+            .object { transition: 0.1s linear; }
         </style>
     </head>
     <body>      
         <div id="usernamePopup">
-            <p>version 0.2</p>
+            <p>version 0.3</p>
             <h1>enter your username</h1>
-            <input placeholder="username" id="usernameInput"></input><br>
+            <input maxlength="25" placeholder="username" id="usernameInput"></input><br>
             <button id="usernameButton">submit</button>
         </div>
         <div style="display: none;" id="main">
             <p id="cords"></p>
             <p id="online-text">online players: 0</p>
+            <p id="object-text" style="margin: 0px;">total objects: 0</p>
             <div id="playerContainer"></div>
             <div id="player"></div>
             <div id="invMain" style="display: none;">
@@ -36,12 +40,13 @@
             <input id="messageInput" placeholder="press enter to message" maxlength="50"></input>
             <div id="slots">
                 <div class="slot" id="slot-1">1</div>
-                <div class="slot" id="slot-2">2</div>
+                <div class="slot" id="slot-2">2 create</div>
                 <div class="slot" id="slot-3">3</div>
                 <div class="slot" id="slot-4">4</div>
                 <div class="slot" id="slot-5">5</div>
             </div>
             <div id="wall"></div>
+            <div id="hover"></div>
         </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
@@ -63,6 +68,8 @@
             let invMain = document.getElementById("invMain");
             let cordsText = document.getElementById("cords");
             let onlineText = document.getElementById("online-text");
+            let hoverElement = document.getElementById("hover");
+            let objectText = document.getElementById("object-text");
             let speed = 3;
             let keys = {};
             let sendValue = 0;
@@ -77,28 +84,24 @@
             let playerRef = ref(database, "players/" + playerID);
             let playerRefA = ref(database, "players/");
             let messageRef = ref(database, "messages/");
+            let blockRef = ref(database, "blocks/");
             onDisconnect(playerRef).remove();
             pos.xSize = width;
             pos.ySize = height;
             let worldX = 0;
             let worldY = 0;
+            let blocks = [];
             if (speedURL != null) {
                 speed = Number(speedURL);
             }
-
             let currentSlot = 1;
-
             let slots = document.getElementsByClassName("slot");
-            console.log(slots);
-
             slots[0].style.left = window.innerWidth / 2 - 185 + "px";
             slots[1].style.left = window.innerWidth / 2 - 115 + "px";
             slots[2].style.left = window.innerWidth / 2 - 45 + "px";
             slots[3].style.left = window.innerWidth / 2 + 25 + "px";
             slots[4].style.left = window.innerWidth / 2 + 95 + "px";
-
             let wall = document.getElementById("wall");
-            
             function updateSlotColors() {
                 for (let i = 0; i < slots.length; i++) {
                     if (i + 1 === currentSlot) {
@@ -108,16 +111,13 @@
                     }
                 }
             }
-
             for (let i = 0; i < slots.length; i++) {
                 slots[i].addEventListener("click", () => {
                     currentSlot = i + 1;
                     updateSlotColors();
                 });
             }
-
             updateSlotColors();
-
             document.getElementById("usernameButton").addEventListener("click", () => {
                 if (document.getElementById("usernameInput").value == "") {
                     return;
@@ -141,6 +141,23 @@
                 playerUsername.style.textAlign = "center";
                 playerUsername.style.fontWeight = "bold";
                 document.body.appendChild(playerUsername);
+                onChildAdded(blockRef, (snapshot) => {
+                    const block = snapshot.val();
+                    let newBlock = document.createElement("div");
+                    newBlock.style.height = "50px";
+                    newBlock.style.width = "50px";
+                    newBlock.id = "block";
+                    newBlock.style.backgroundColor = block.color;
+                    newBlock.style.position = "absolute";
+                    newBlock.style.zIndex = -1000;
+                    newBlock.x = block.x;
+                    newBlock.y = block.y;
+                    newBlock.classList.add("block");
+                    newBlock.style.left = worldX + block.x + "px";
+                    newBlock.style.top = worldY + block.y + "px";
+                    document.body.appendChild(newBlock);
+                    blocks.push(newBlock);
+                });
             });
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
@@ -170,6 +187,8 @@
                 }
             })
             document.addEventListener('mousemove', function(event) {
+                hoverElement.style.left = event.clientX - 25 + "px";
+                hoverElement.style.top = event.clientY - 25 + "px";
                 let mouseX = event.clientX;
                 let mouseY = event.clientY;
                 let playerRect = player.getBoundingClientRect();
@@ -209,9 +228,20 @@
                     player.style.height = pos.ySize;
                     wall.style.left = worldX + 500 + "px";
                     wall.style.top = worldY + 500 + "px";
+                    let hoverElement = document.getElementById("hover");
+                    if (currentSlot == 2) {
+                        hoverElement.style.display = "block";
+                    } else {
+                        hoverElement.style.display = "none";
+                    }
                     requestAnimationFrame(gameLoop);
                     getPlayers();
+                    getObjectCount();
                     updateSlotColors();
+                    blocks.forEach(block => {
+                        block.style.left = worldX + block.x + "px";
+                        block.style.top = worldY + block.y + "px";
+                    });
                 }
                 if (sendValue >= 5) {
                     sendValue = 0;
@@ -229,6 +259,14 @@
                 if (message.username == "System") {
                     messageElement.style.fontStyle = "italic";
                     messageElement.style.color = "gray";
+                }
+                if (message.message.includes("/playsound")) {
+                    let command = message.message.split(' ');
+                    let sound = command[1];
+                    let audioElement = document.createElement("audio");
+                    audioElement.src = "https://raw.githubusercontent.com/seaotter6382/seaotter6382.github.io/refs/heads/main/sounds/" + sound + ".mp3";
+                    audioElement.autoplay = true;
+                    document.body.appendChild(audioElement);
                 }
                 messageElement.textContent = `${message.username}: ${message.message}`;
                 const chatArea = document.getElementById("chatArea");
@@ -301,8 +339,31 @@
                     }
                 });
             }
+            document.addEventListener("click", (event) => {
+                if (currentSlot == 2) {
+                    let clickedElement = document.elementFromPoint(event.clientX, event.clientY);
+                    if (clickedElement.id == "player" || clickedElement.id == "wall" || clickedElement.id == "block") {
+                        return;
+                    }
+                    let color;
+                    if (pos.color == "red") {
+                        color = "blue";
+                    } else {
+                        color = pos.color;
+                    }
+                    push(blockRef, {
+                        x: event.clientX - worldX - 25,
+                        y: event.clientY - worldY - 25,
+                        color: color
+                    });
+                    set(blockRef, null);
+                   }
+            });
+            function getObjectCount() {
+                let blockElements = document.getElementsByClassName("block");
+                objectText.textContent = "total objects: " + blockElements.length;
+            }
             set(playerRefA, null);
         </script>
     </body>
 </html>
-
