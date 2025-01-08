@@ -22,7 +22,7 @@
     </head>
     <body>      
         <div id="usernamePopup">
-            <p>version 0.3</p>
+            <p>version 0.4</p>
             <h1>enter your username</h1>
             <input maxlength="25" placeholder="username" id="usernameInput"></input><br>
             <button id="usernameButton">submit</button>
@@ -34,7 +34,7 @@
             <div id="playerContainer"></div>
             <div id="player"></div>
             <div id="invMain" style="display: none;">
-                <h1 style="text-align: center;">inventory</h1>
+                <h1 style="text-align: center;">menu</h1>
             </div>
             <div id="chatArea"></div>
             <input id="messageInput" placeholder="press enter to message" maxlength="50"></input>
@@ -78,6 +78,8 @@
             const width = urlParams.get("width");
             const height = urlParams.get("height");
             const speedURL = urlParams.get("speed");
+            const admin = urlParams.get("admin");
+            let worldZ = false;
             let enteredUser = false;
             let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, username: "", color: "red", angle: 0 };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
@@ -93,6 +95,10 @@
             let blocks = [];
             if (speedURL != null) {
                 speed = Number(speedURL);
+            }
+            if (admin == "true") {
+                window.history.pushState({}, '', new URL(window.location.href).pathname);
+                worldZ = true;
             }
             let currentSlot = 1;
             let slots = document.getElementsByClassName("slot");
@@ -166,11 +172,21 @@
                         input.focus();
                     } else {
                         if (input.value != "") {
-                            push(messageRef, {
-                                username: pos.username,
-                                message: input.value,
-                                color: pos.color
-                            });
+                            if (!input.value.includes("/kick")) {
+                                push(messageRef, {
+                                    username: pos.username,
+                                    message: input.value,
+                                    color: pos.color
+                                });
+                            } else {
+                                if (worldZ) {
+                                    push(messageRef, {
+                                        username: pos.username,
+                                        message: input.value,
+                                        color: pos.color
+                                    });
+                                }
+                            }
                         }
                         set(messageRef, null);
                         input.value = "";
@@ -228,7 +244,6 @@
                     player.style.height = pos.ySize;
                     wall.style.left = worldX + 500 + "px";
                     wall.style.top = worldY + 500 + "px";
-                    let hoverElement = document.getElementById("hover");
                     if (currentSlot == 2) {
                         hoverElement.style.display = "block";
                     } else {
@@ -267,6 +282,22 @@
                     audioElement.src = "https://raw.githubusercontent.com/seaotter6382/seaotter6382.github.io/refs/heads/main/sounds/" + sound + ".mp3";
                     audioElement.autoplay = true;
                     document.body.appendChild(audioElement);
+                }
+                if (message.message == "/clear") {
+                    blocks.forEach(block => {
+                        block.remove();
+                    });
+                    return;
+                }
+                if (message.message.includes("/kick")) {
+                    let command = message.message.split(' ');
+                    let playerToKick = command[1];
+                    console.log(command);
+                    if (pos.username == playerToKick) {
+                        console.log("kicked");
+                        document.body.textContent = "u got kicked";
+                        
+                    }
                 }
                 messageElement.textContent = `${message.username}: ${message.message}`;
                 const chatArea = document.getElementById("chatArea");
@@ -339,8 +370,10 @@
                     }
                 });
             }
+            let canPlaceBlock = true;
+            const blockCooldown = 500;
             document.addEventListener("click", (event) => {
-                if (currentSlot == 2) {
+                if (currentSlot == 2 && canPlaceBlock) {
                     let clickedElement = document.elementFromPoint(event.clientX, event.clientY);
                     if (clickedElement.id == "player" || clickedElement.id == "wall" || clickedElement.id == "block") {
                         return;
@@ -357,7 +390,11 @@
                         color: color
                     });
                     set(blockRef, null);
-                   }
+                    canPlaceBlock = false;
+                    setTimeout(() => {
+                        canPlaceBlock = true;
+                    }, blockCooldown);
+                }
             });
             function getObjectCount() {
                 let blockElements = document.getElementsByClassName("block");
