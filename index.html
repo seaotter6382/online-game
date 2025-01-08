@@ -83,6 +83,7 @@
             let healthBarBack = document.getElementById("healthBarBack");
             let speed = 3;
             let keys = {};
+            let bKey = false;
             let sendValue = 0;
             let showInput = false;
             const urlParams = new URLSearchParams(window.location.search);
@@ -106,6 +107,7 @@
             let dead = false;
             let blocks = [];
             let swordDammage = 2;
+            let inGame = false;
             if (speedURL != null) {
                 speed = Number(speedURL);
             }
@@ -178,9 +180,14 @@
                     document.body.appendChild(newBlock);
                     blocks.push(newBlock);
                 });
+                inGame = true;
             });
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
+                if (event.key == "b" && inGame) {
+                    bKey = !bKey
+                    console.log(bKey);
+                }
                 if (event.key == "Enter") {     
                     if (document.activeElement !== input) {
                         input.focus();
@@ -271,9 +278,14 @@
                         sword.style.display = 'none';
                         pos.heldItem = "none";
                     }
+                    if (bKey) {
+                        sword.style.backgroundColor = "red";
+                    } else {
+                        sword.style.backgroundColor = "black";
+                    }
                     if (currentSlot == 3) {
                         blocks.forEach(block => {
-                            if (currentSlot == 3 && sword.style.display == 'block' && keys['b']) {
+                            if (currentSlot == 3 && sword.style.display == 'block' && bKey) {
                                 let swordRect = sword.getBoundingClientRect();
                                 let blockRect = block.getBoundingClientRect();
                                 if (
