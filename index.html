@@ -4,7 +4,7 @@
         <style>
             html { overflow: hidden; }
             #player { height: 50px; width: 50px; background-color: blue; position: absolute; }
-            .otherplayer { transition: 0.1s linear; overflow: hidden; height: 50px; width: 50px;}
+            .otherplayer { transition: 0.1s linear; height: 50px; width: 50px;}
             #chatArea { height: 400px; width: 350px; bottom: 40; overflow: hidden; position: absolute; }
             #messageInput { box-sizing: border-box; position: absolute; bottom: 10; width: 350px; }
             #invMain { z-index: 1000; height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray; }
@@ -18,11 +18,14 @@
             #block { transition: 0.1s linear; }
             #hover { position: absolute; height: 50px; width: 50px; background-color: rgba(83, 83, 83, 0.5); }
             .object { transition: 0.1s linear; }
+            #healthBar { left: 50%; transform: translateX(-50%); position: absolute; height: 10px; width: 100px; background-color: rgb(255, 0, 0); }
+            #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); }
+            #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
         </style>
     </head>
     <body>      
         <div id="usernamePopup">
-            <p>version 0.4</p>
+            <p>version 0.5</p>
             <h1>enter your username</h1>
             <input maxlength="25" placeholder="username" id="usernameInput"></input><br>
             <button id="usernameButton">submit</button>
@@ -32,7 +35,9 @@
             <p id="online-text">online players: 0</p>
             <p id="object-text" style="margin: 0px;">total objects: 0</p>
             <div id="playerContainer"></div>
-            <div id="player"></div>
+            <div id="player">
+                <div id="sword"></div>
+            </div>
             <div id="invMain" style="display: none;">
                 <h1 style="text-align: center;">menu</h1>
             </div>
@@ -41,12 +46,15 @@
             <div id="slots">
                 <div class="slot" id="slot-1">1</div>
                 <div class="slot" id="slot-2">2 create</div>
-                <div class="slot" id="slot-3">3</div>
+                <div class="slot" id="slot-3">3 sword</div>
                 <div class="slot" id="slot-4">4</div>
                 <div class="slot" id="slot-5">5</div>
             </div>
             <div id="wall"></div>
             <div id="hover"></div>
+            <div id="healthBarBack">
+                <div id="healthBar"></div>
+            </div>
         </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
@@ -70,6 +78,9 @@
             let onlineText = document.getElementById("online-text");
             let hoverElement = document.getElementById("hover");
             let objectText = document.getElementById("object-text");
+            let sword = document.getElementById("sword");
+            let healthBar = document.getElementById("healthBar");
+            let healthBarBack = document.getElementById("healthBarBack");
             let speed = 3;
             let keys = {};
             let sendValue = 0;
@@ -81,7 +92,7 @@
             const admin = urlParams.get("admin");
             let worldZ = false;
             let enteredUser = false;
-            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, username: "", color: "red", angle: 0 };
+            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, username: "", color: "red", angle: 0, health: 100, heldItem: "none" };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
             let playerRefA = ref(database, "players/");
@@ -92,7 +103,9 @@
             pos.ySize = height;
             let worldX = 0;
             let worldY = 0;
+            let dead = false;
             let blocks = [];
+            let swordDammage = 2;
             if (speedURL != null) {
                 speed = Number(speedURL);
             }
@@ -107,6 +120,7 @@
             slots[2].style.left = window.innerWidth / 2 - 45 + "px";
             slots[3].style.left = window.innerWidth / 2 + 25 + "px";
             slots[4].style.left = window.innerWidth / 2 + 95 + "px";
+            healthBarBack.style.left = window.innerWidth / 2 - 125 + "px";
             let wall = document.getElementById("wall");
             function updateSlotColors() {
                 for (let i = 0; i < slots.length; i++) {
@@ -228,7 +242,7 @@
             player.style.top = pos.y + "px";
             function gameLoop() {
                 if (player) {
-                    if (document.activeElement !== input) {
+                    if (document.activeElement !== input && !dead) {
                         if (keys['a']) { worldX = Math.min(worldX + speed, 5000); pos.x = Math.max(pos.x - speed, -5000); }
                         if (keys['w']) { worldY = Math.min(worldY + speed, 5000); pos.y = Math.max(pos.y - speed, -5000); }
                         if (keys['s']) { worldY = Math.max(worldY - speed, -5000); pos.y = Math.min(pos.y + speed, 5000); }
@@ -244,10 +258,70 @@
                     player.style.height = pos.ySize;
                     wall.style.left = worldX + 500 + "px";
                     wall.style.top = worldY + 500 + "px";
+                    healthBar.style.width = pos.health + "%";
                     if (currentSlot == 2) {
                         hoverElement.style.display = "block";
                     } else {
                         hoverElement.style.display = "none";
+                    }
+                    if (currentSlot == 3) {
+                        sword.style.display = 'block';
+                        pos.heldItem = "sword";
+                    } else {
+                        sword.style.display = 'none';
+                        pos.heldItem = "none";
+                    }
+                    if (currentSlot == 3) {
+                        blocks.forEach(block => {
+                            if (currentSlot == 3 && sword.style.display == 'block' && keys['b']) {
+                                let swordRect = sword.getBoundingClientRect();
+                                let blockRect = block.getBoundingClientRect();
+                                if (
+                                    swordRect.left < blockRect.right &&
+                                    swordRect.right > blockRect.left &&
+                                    swordRect.top < blockRect.bottom &&
+                                    swordRect.bottom > blockRect.top
+                                ) {
+                                    block.remove();
+                                    blocks = blocks.filter(b => b !== block);
+                                }
+                            }
+                        });
+                    }
+                    const playerRect = player.getBoundingClientRect();
+                    const otherPlayers = document.getElementsByClassName("otherPlayer");
+                    for (let i = 0; i < otherPlayers.length; i++) {
+                        const otherPlayer = otherPlayers[i];
+                        const otherPlayerSword = otherPlayer.querySelector("div[id$='sword']");
+                        if (otherPlayerSword && otherPlayerSword.style.display == 'block') {
+                            const otherPlayerSwordRect = otherPlayerSword.getBoundingClientRect();
+                            if (
+                                otherPlayerSwordRect.left < playerRect.right &&
+                                otherPlayerSwordRect.right > playerRect.left &&
+                                otherPlayerSwordRect.top < playerRect.bottom &&
+                                otherPlayerSwordRect.bottom > playerRect.top
+                            ) {
+                                if (!dead) {
+                                    pos.health -= swordDammage;
+                                }
+                                if (pos.health <= 0) {
+                                    pos.health = 100;
+                                    dead = true;
+                                    let color = pos.color;
+                                    let color2 = player.style.backgroundColor;
+                                    pos.color = "rgba(100, 100, 100, 100)";
+                                    player.style.backgroundColor = "rgba(100, 100, 100, 100)"
+                                    setTimeout(() => {
+                                        pos.color = color;
+                                        player.style.backgroundColor = color2;
+                                        dead = false;
+                                    }, 3000);
+                                }
+                            }
+                        }
+                    }
+                    if (pos.health < 100) {
+                        pos.health += 0.5;
                     }
                     requestAnimationFrame(gameLoop);
                     getPlayers();
@@ -316,6 +390,31 @@
                                 if (key != playerID) {
                                     let otherPlayerDiv = document.getElementById(key);
                                     let otherPlayerUsername = document.getElementById(key + "username");
+                                    let otherPlayerHealth = document.getElementById(key + "health");
+                                    let otherPlayerHealthBack = document.getElementById(key + "healthBack");
+                                    let otherPlayerSword = document.getElementById(key + "sword");
+                                    if (!otherPlayerHealthBack) {
+                                        otherPlayerHealthBack = document.createElement("div");
+                                        otherPlayerHealthBack.id = key + "healthBack";
+                                        otherPlayerHealthBack.style.height = "10px";
+                                        otherPlayerHealthBack.style.width = "100px";
+                                        otherPlayerHealthBack.style.backgroundColor = "rgb(75, 75, 75)";
+                                        otherPlayerHealthBack.style.position = "absolute";
+                                        otherPlayerHealthBack.style.transition = "0.1s linear";
+                                        otherPlayerHealthBack.style.zIndex = 99;
+                                        document.getElementById("playerContainer").appendChild(otherPlayerHealthBack);
+                                    }
+                                    if (!otherPlayerHealth) {
+                                        otherPlayerHealth = document.createElement("div");
+                                        otherPlayerHealth.id = key + "health";
+                                        otherPlayerHealth.style.height = "10px";
+                                        otherPlayerHealth.style.width = "100px";
+                                        otherPlayerHealth.style.backgroundColor = "rgb(255, 0, 0)";
+                                        otherPlayerHealth.style.position = "absolute";
+                                        otherPlayerHealth.style.transition = "0.1s linear";
+                                        otherPlayerHealth.style.zIndex = 100;
+                                        document.getElementById(key + "healthBack").appendChild(otherPlayerHealth);
+                                    }
                                     if (!otherPlayerUsername) {
                                         otherPlayerUsername = document.createElement("p");
                                         otherPlayerUsername.id = key + "username";
@@ -334,13 +433,36 @@
                                         otherPlayerDiv.style.position = "absolute";
                                         document.getElementById("playerContainer").appendChild(otherPlayerDiv);
                                     }
+                                    if (!otherPlayerSword) {
+                                        otherPlayerSword = document.createElement("div");
+                                        otherPlayerSword.style.height = "75px";
+                                        otherPlayerSword.style.width = "10px";
+                                        otherPlayerSword.id = key + "sword";
+                                        otherPlayerSword.style.backgroundColor = "rgb(0, 0, 0)";
+                                        otherPlayerSword.style.position = "absolute";
+                                        otherPlayerSword.style.transformOrigin = "bottom";
+                                        otherPlayerSword.style.transform = "rotate(90deg)";
+                                        otherPlayerDiv.appendChild(otherPlayerSword);
+                                    }
+                                    if (otherPlayer.heldItem == "sword") {
+                                        otherPlayerSword.style.display = 'block';
+                                    } else {
+                                        otherPlayerSword.style.display = 'none';
+                                    }
                                     otherPlayerDiv.style.left = worldX + otherPlayer.x + "px";
                                     otherPlayerDiv.style.top = worldY + otherPlayer.y + "px";
+                                    otherPlayerHealth.style.width = otherPlayer.health + "%";
                                     otherPlayerDiv.style.transform = `translate(-50%, -50%) rotate(${otherPlayer.angle}deg)`;
                                     otherPlayerUsername.textContent = otherPlayer.username;
                                     otherPlayerUsername.style.left = worldX + otherPlayer.x + otherPlayerDiv.offsetWidth / 2 - otherPlayerUsername.offsetWidth / 2 - 25 + "px";
                                     otherPlayerUsername.style.top = worldY + otherPlayer.y - 75 + "px";
+                                    otherPlayerHealthBack.style.left = worldX + otherPlayer.x + otherPlayerDiv.offsetWidth / 2 - 75 + "px";
+                                    otherPlayerHealthBack.style.top = worldY + otherPlayer.y + 40 + "px";
                                     otherPlayerDiv.style.backgroundColor = otherPlayer.color;
+
+                                    otherPlayerSword.style.left = "45px";
+                                    otherPlayerSword.style.top = "-30px";
+
                                     if (otherPlayer.xSize != null) {
                                         otherPlayerDiv.style.width = otherPlayer.xSize;
                                     }
@@ -355,9 +477,11 @@
                     const playerId = snapshot.key;
                     const otherPlayerDiv = document.getElementById(playerId);
                     const otherPlayerUsername = document.getElementById(playerId + "username");
+                    const otherPlayerHealth = document.getElementById(playerId + "healthBack");
                     if (otherPlayerDiv && otherPlayerUsername) {
                         otherPlayerDiv.remove();
                         otherPlayerUsername.remove();
+                        otherPlayerHealth.remove();
                     }
                 });
             }
@@ -373,7 +497,7 @@
             let canPlaceBlock = true;
             const blockCooldown = 500;
             document.addEventListener("click", (event) => {
-                if (currentSlot == 2 && canPlaceBlock) {
+                if (currentSlot == 2 && canPlaceBlock && !dead) {
                     let clickedElement = document.elementFromPoint(event.clientX, event.clientY);
                     if (clickedElement.id == "player" || clickedElement.id == "wall" || clickedElement.id == "block") {
                         return;
@@ -394,6 +518,12 @@
                     setTimeout(() => {
                         canPlaceBlock = true;
                     }, blockCooldown);
+                }
+                if (currentSlot == 3) {
+                    sword.style.transform = 'rotate(0deg)';
+                    setTimeout(() => {
+                        sword.style.transform = 'rotate(90deg)';
+                    }, 100);
                 }
             });
             function getObjectCount() {
