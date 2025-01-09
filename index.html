@@ -19,13 +19,13 @@
             #hover { position: absolute; height: 50px; width: 50px; background-color: rgba(83, 83, 83, 0.5); }
             .object { transition: 0.1s linear; }
             #healthBar { left: 50%; transform: translateX(-50%); position: absolute; height: 10px; width: 100px; background-color: rgb(255, 0, 0); }
-            #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); }
+            #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); border: 2px solid black; }
             #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
         </style>
     </head>
     <body>      
         <div id="usernamePopup">
-            <p>version 0.5</p>
+            <p id="version">version 0.6</p>
             <h1>enter your username</h1>
             <input maxlength="25" placeholder="username" id="usernameInput"></input><br>
             <button id="usernameButton">submit</button>
@@ -58,7 +58,7 @@
         </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
-            import { getDatabase, ref, set, onDisconnect, onValue, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
+            import { getDatabase, ref, set, onDisconnect, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
             const firebaseConfig = {
                 apiKey: "AIzaSyBdqoHJ58sFCcKpdHLw7mKUg_Bpi7xc7ok",
                 authDomain: "game-10962.firebaseapp.com",
@@ -92,13 +92,29 @@
             const speedURL = urlParams.get("speed");
             const admin = urlParams.get("admin");
             let worldZ = false;
-            let enteredUser = false;
-            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, username: "", color: "red", angle: 0, health: 100, heldItem: "none" };
+            let enteredUser = false;                            let leaderboardRef = ref(database, "leaderboard/");
+            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, kills: 0, y: window.innerHeight / 2 - 50, username: "", color: "red", angle: 0, health: 100, heldItem: "none", clicked: false };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
             let playerRefA = ref(database, "players/");
             let messageRef = ref(database, "messages/");
             let blockRef = ref(database, "blocks/");
+            let version = "0";
+            let gameVersion = "0.6";
+            get(ref(database, '/version')).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const intValue = snapshot.val();
+                    console.log(intValue.toString());
+                    console.log(gameVersion);
+                    if (gameVersion == intValue.toString()) {
+                        document.getElementById("version").style.color = "green";
+                    } else {
+                        document.getElementById("version").style.color = "red";
+                    }
+                }
+            }).catch((error) => {
+                console.error(error);
+            });
             onDisconnect(playerRef).remove();
             pos.xSize = width;
             pos.ySize = height;
@@ -106,7 +122,7 @@
             let worldY = 0;
             let dead = false;
             let blocks = [];
-            let swordDammage = 2;
+            let swordDammage = 5;
             let inGame = false;
             if (speedURL != null) {
                 speed = Number(speedURL);
@@ -162,6 +178,8 @@
                 playerUsername.style.width = window.innerWidth - 75 + "px";
                 playerUsername.style.textAlign = "center";
                 playerUsername.style.fontWeight = "bold";
+                pos.health = parseInt(atob("MTAw"), 10);
+                speed = Math.max(parseInt(atob("Mw=="), 10), 3);
                 document.body.appendChild(playerUsername);
                 onChildAdded(blockRef, (snapshot) => {
                     const block = snapshot.val();
@@ -288,52 +306,15 @@
                             if (currentSlot == 3 && sword.style.display == 'block' && bKey) {
                                 let swordRect = sword.getBoundingClientRect();
                                 let blockRect = block.getBoundingClientRect();
-                                if (
-                                    swordRect.left < blockRect.right &&
-                                    swordRect.right > blockRect.left &&
-                                    swordRect.top < blockRect.bottom &&
-                                    swordRect.bottom > blockRect.top
-                                ) {
+                                if (swordRect.left < blockRect.right && swordRect.right > blockRect.left && swordRect.top < blockRect.bottom && swordRect.bottom > blockRect.top) {
                                     block.remove();
                                     blocks = blocks.filter(b => b !== block);
                                 }
                             }
                         });
                     }
-                    const playerRect = player.getBoundingClientRect();
-                    const otherPlayers = document.getElementsByClassName("otherPlayer");
-                    for (let i = 0; i < otherPlayers.length; i++) {
-                        const otherPlayer = otherPlayers[i];
-                        const otherPlayerSword = otherPlayer.querySelector("div[id$='sword']");
-                        if (otherPlayerSword && otherPlayerSword.style.display == 'block') {
-                            const otherPlayerSwordRect = otherPlayerSword.getBoundingClientRect();
-                            if (
-                                otherPlayerSwordRect.left < playerRect.right &&
-                                otherPlayerSwordRect.right > playerRect.left &&
-                                otherPlayerSwordRect.top < playerRect.bottom &&
-                                otherPlayerSwordRect.bottom > playerRect.top
-                            ) {
-                                if (!dead) {
-                                    pos.health -= swordDammage;
-                                }
-                                if (pos.health <= 0) {
-                                    pos.health = 100;
-                                    dead = true;
-                                    let color = pos.color;
-                                    let color2 = player.style.backgroundColor;
-                                    pos.color = "rgba(100, 100, 100, 100)";
-                                    player.style.backgroundColor = "rgba(100, 100, 100, 100)"
-                                    setTimeout(() => {
-                                        pos.color = color;
-                                        player.style.backgroundColor = color2;
-                                        dead = false;
-                                    }, 3000);
-                                }
-                            }
-                        }
-                    }
                     if (pos.health < 100) {
-                        pos.health += 0.5;
+                        pos.health += 0.25;
                     }
                     requestAnimationFrame(gameLoop);
                     getPlayers();
@@ -481,6 +462,33 @@
                                     if (otherPlayer.ySize != null) {
                                         otherPlayerDiv.style.height = otherPlayer.ySize;
                                     }
+                                    const playerRect = player.getBoundingClientRect();
+                                    if (otherPlayerSword && otherPlayerSword.style.display == 'block') {
+                                        const otherPlayerSwordRect = otherPlayerSword.getBoundingClientRect();
+                                        if (
+                                            otherPlayerSwordRect.left < playerRect.right &&
+                                            otherPlayerSwordRect.right > playerRect.left &&
+                                            otherPlayerSwordRect.top < playerRect.bottom &&
+                                            otherPlayerSwordRect.bottom > playerRect.top
+                                        ) {
+                                            if (!dead && otherPlayer.clicked == true) {
+                                                pos.health -= swordDammage;
+                                            }
+                                            if (pos.health <= 0) {
+                                                pos.health = 100;
+                                                dead = true;
+                                                let color = pos.color;
+                                                let color2 = player.style.backgroundColor;
+                                                pos.color = "rgba(100, 100, 100, 100)";
+                                                player.style.backgroundColor = "rgba(100, 100, 100, 100)"
+                                                setTimeout(() => {
+                                                    pos.color = color;
+                                                    player.style.backgroundColor = color2;
+                                                    dead = false;
+                                                }, 3000);
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -533,8 +541,10 @@
                 }
                 if (currentSlot == 3) {
                     sword.style.transform = 'rotate(0deg)';
+                    pos.clicked = true;
                     setTimeout(() => {
                         sword.style.transform = 'rotate(90deg)';
+                        pos.clicked = false;
                     }, 100);
                 }
             });
