@@ -434,6 +434,7 @@
                                         otherPlayerSword.id = key + "sword";
                                         otherPlayerSword.style.backgroundColor = "rgb(0, 0, 0)";
                                         otherPlayerSword.style.position = "absolute";
+                                        otherPlayerSword.style.transition = "0.1s linear";
                                         otherPlayerSword.style.transformOrigin = "bottom";
                                         otherPlayerSword.style.transform = "rotate(90deg)";
                                         otherPlayerDiv.appendChild(otherPlayerSword);
@@ -456,6 +457,12 @@
 
                                     otherPlayerSword.style.left = "45px";
                                     otherPlayerSword.style.top = "-30px";
+                                    if (otherPlayer.clicked == true) {
+                                        otherPlayerSword.style.transform = 'rotate(0deg)';
+                                        setTimeout(() => {
+                                            otherPlayerSword.style.transform = 'rotate(90deg)';
+                                        }, 100);
+                                    }
 
                                     if (otherPlayer.xSize != null) {
                                         otherPlayerDiv.style.width = otherPlayer.xSize;
