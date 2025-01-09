@@ -92,7 +92,7 @@
             const speedURL = urlParams.get("speed");
             const admin = urlParams.get("admin");
             let worldZ = false;
-            let enteredUser = false;                            let leaderboardRef = ref(database, "leaderboard/");
+            let enteredUser = false;
             let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, kills: 0, y: window.innerHeight / 2 - 50, username: "", color: "red", angle: 0, health: 100, heldItem: "none", clicked: false };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
@@ -160,6 +160,7 @@
                 if (document.getElementById("usernameInput").value == "") {
                     return;
                 }
+                document.getElementById("usernameInput").value = document.getElementById("usernameInput").value.replace(/\s+/g, '');
                 push(messageRef, {
                     username: "System",
                     message: document.getElementById("usernameInput").value + " has joined the game",
