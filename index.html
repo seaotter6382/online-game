@@ -21,11 +21,12 @@
             #healthBar { left: 50%; transform: translateX(-50%); position: absolute; height: 10px; width: 100px; background-color: rgb(255, 0, 0); }
             #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); border: 2px solid black; }
             #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
+            .arrow { height: 10px; width: 30px; background-color: brown; transition: 0.1s linear; position: absolute; transform-origin: center }
         </style>
     </head>
     <body>      
         <div id="usernamePopup">
-            <p id="version">version 0.6</p>
+            <p id="version">version 0.7</p>
             <h1>enter your username</h1>
             <input maxlength="25" placeholder="username" id="usernameInput"></input><br>
             <button id="usernameButton">submit</button>
@@ -45,8 +46,8 @@
             <input id="messageInput" placeholder="press enter to message" maxlength="50"></input>
             <div id="slots">
                 <div class="slot" id="slot-1">1</div>
-                <div class="slot" id="slot-2">2 create</div>
-                <div class="slot" id="slot-3">3 sword</div>
+                <div class="slot" id="slot-2">2<br>create</div>
+                <div class="slot" id="slot-3">3<br>sword</div>
                 <div class="slot" id="slot-4">4</div>
                 <div class="slot" id="slot-5">5</div>
             </div>
@@ -81,40 +82,35 @@
             let sword = document.getElementById("sword");
             let healthBar = document.getElementById("healthBar");
             let healthBarBack = document.getElementById("healthBarBack");
-            let speed = 3;
             let keys = {};
             let bKey = false;
             let sendValue = 0;
             let showInput = false;
             const urlParams = new URLSearchParams(window.location.search);
+            const test = urlParams.get("admin");
             const width = urlParams.get("width");
             const height = urlParams.get("height");
-            const speedURL = urlParams.get("speed");
-            const admin = urlParams.get("admin");
-            let worldZ = false;
             let enteredUser = false;
-            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, kills: 0, y: window.innerHeight / 2 - 50, username: "", color: "red", angle: 0, health: 100, heldItem: "none", clicked: false };
+            let pos = { xSize: 100, ySize: 100, x: window.innerWidth / 2 - 25, y: window.innerHeight / 2 - 50, username: "", color: "red", angle: 0, health: 100, heldItem: "none", clicked: false, deleteSword: false };
             let playerID = Math.floor(Math.random() * (10000000000 - 1 + 1)) + 1;
             let playerRef = ref(database, "players/" + playerID);
             let playerRefA = ref(database, "players/");
             let messageRef = ref(database, "messages/");
             let blockRef = ref(database, "blocks/");
+            let canUseSword = true;
             let version = "0";
-            let gameVersion = "0.6";
+            let gameVersion = "0.7";
+            let haveSword = false;
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
                     const intValue = snapshot.val();
-                    console.log(intValue.toString());
-                    console.log(gameVersion);
                     if (gameVersion == intValue.toString()) {
                         document.getElementById("version").style.color = "green";
                     } else {
                         document.getElementById("version").style.color = "red";
                     }
                 }
-            }).catch((error) => {
-                console.error(error);
-            });
+            })
             onDisconnect(playerRef).remove();
             pos.xSize = width;
             pos.ySize = height;
@@ -122,14 +118,10 @@
             let worldY = 0;
             let dead = false;
             let blocks = [];
-            let swordDammage = 5;
             let inGame = false;
-            if (speedURL != null) {
-                speed = Number(speedURL);
-            }
-            if (admin == "true") {
+            if (test == "true") {
                 window.history.pushState({}, '', new URL(window.location.href).pathname);
-                worldZ = true;
+                haveSword = true;
             }
             let currentSlot = 1;
             let slots = document.getElementsByClassName("slot");
@@ -179,8 +171,7 @@
                 playerUsername.style.width = window.innerWidth - 75 + "px";
                 playerUsername.style.textAlign = "center";
                 playerUsername.style.fontWeight = "bold";
-                pos.health = parseInt(atob("MTAw"), 10);
-                speed = Math.max(parseInt(atob("Mw=="), 10), 3);
+                pos.health = Math.max(100);
                 document.body.appendChild(playerUsername);
                 onChildAdded(blockRef, (snapshot) => {
                     const block = snapshot.val();
@@ -203,9 +194,9 @@
             });
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
-                if (event.key == "b" && inGame) {
+                if (event.key == "b" && inGame && document.activeElement !== input) {
                     bKey = !bKey
-                    console.log(bKey);
+                    pos.deleteSword = bKey;
                 }
                 if (event.key == "Enter") {     
                     if (document.activeElement !== input) {
@@ -219,7 +210,7 @@
                                     color: pos.color
                                 });
                             } else {
-                                if (worldZ) {
+                                if (haveSword) {
                                     push(messageRef, {
                                         username: pos.username,
                                         message: input.value,
@@ -269,10 +260,14 @@
             function gameLoop() {
                 if (player) {
                     if (document.activeElement !== input && !dead) {
-                        if (keys['a']) { worldX = Math.min(worldX + speed, 5000); pos.x = Math.max(pos.x - speed, -5000); }
-                        if (keys['w']) { worldY = Math.min(worldY + speed, 5000); pos.y = Math.max(pos.y - speed, -5000); }
-                        if (keys['s']) { worldY = Math.max(worldY - speed, -5000); pos.y = Math.min(pos.y + speed, 5000); }
-                        if (keys['d']) { worldX = Math.max(worldX - speed, -5000); pos.x = Math.min(pos.x + speed, 5000); }
+                        if (keys['a']) { worldX = Math.min(worldX + 3, 5000); pos.x = Math.max(pos.x - 3, -5000); }
+                        if (keys['w']) { worldY = Math.min(worldY + 3, 5000); pos.y = Math.max(pos.y - 3, -5000); }
+                        if (keys['s']) { worldY = Math.max(worldY - 3, -5000); pos.y = Math.min(pos.y + 3, 5000); }
+                        if (keys['d']) { worldX = Math.max(worldX - 3, -5000); pos.x = Math.min(pos.x + 3, 5000); }
+                        if (keys['ArrowLeft']) { worldX = Math.min(worldX + 3, 5000); pos.x = Math.max(pos.x - 3, -5000); }
+                        if (keys['ArrowUp']) { worldY = Math.min(worldY + 3, 5000); pos.y = Math.max(pos.y - 3, -5000); }
+                        if (keys['ArrowDown']) { worldY = Math.max(worldY - 3, -5000); pos.y = Math.min(pos.y + 3, 5000); }
+                        if (keys['ArrowRight']) { worldX = Math.max(worldX - 3, -5000); pos.x = Math.min(pos.x + 3, 5000); }
                         if (keys['1']) { currentSlot = 1; }
                         if (keys['2']) { currentSlot = 2; }
                         if (keys['3']) { currentSlot = 3; }
@@ -284,6 +279,23 @@
                     player.style.height = pos.ySize;
                     wall.style.left = worldX + 500 + "px";
                     wall.style.top = worldY + 500 + "px";
+                    document.getElementById("usernameInput").maxlength = 25;
+                    blocks.forEach(block => {
+                        let blockRect = block.getBoundingClientRect();
+                        let playerRect = player.getBoundingClientRect();
+                        if ((keys['a'] || keys['ArrowLeft']) && playerRect.left < blockRect.right && playerRect.left > blockRect.left && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
+                            pos.x += 3; worldX -= 3;
+                        }
+                        if ((keys['d'] || keys['ArrowRight']) && playerRect.right > blockRect.left && playerRect.right < blockRect.right && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
+                            pos.x -= 3; worldX += 3;
+                        }
+                        if ((keys['w'] || keys['ArrowUp']) && playerRect.top < blockRect.bottom && playerRect.top > blockRect.top && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
+                            pos.y += 3; worldY -= 3;
+                        }
+                        if ((keys['s'] || keys['ArrowDown']) && playerRect.bottom > blockRect.top && playerRect.bottom < blockRect.bottom && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
+                            pos.y -= 3; worldY += 3;
+                        }
+                    });
                     healthBar.style.width = pos.health + "%";
                     if (currentSlot == 2) {
                         hoverElement.style.display = "block";
@@ -362,7 +374,6 @@
                     let playerToKick = command[1];
                     console.log(command);
                     if (pos.username == playerToKick) {
-                        console.log("kicked");
                         document.body.textContent = "u got kicked";
                         
                     }
@@ -454,16 +465,19 @@
                                     otherPlayerHealthBack.style.left = worldX + otherPlayer.x + otherPlayerDiv.offsetWidth / 2 - 75 + "px";
                                     otherPlayerHealthBack.style.top = worldY + otherPlayer.y + 40 + "px";
                                     otherPlayerDiv.style.backgroundColor = otherPlayer.color;
-
                                     otherPlayerSword.style.left = "45px";
                                     otherPlayerSword.style.top = "-30px";
+                                    if (otherPlayer.deleteSword == true) {
+                                        otherPlayerSword.style.backgroundColor = "red";
+                                    } else {
+                                        otherPlayerSword.style.backgroundColor = "black";
+                                    }
                                     if (otherPlayer.clicked == true) {
                                         otherPlayerSword.style.transform = 'rotate(0deg)';
                                         setTimeout(() => {
                                             otherPlayerSword.style.transform = 'rotate(90deg)';
                                         }, 100);
                                     }
-
                                     if (otherPlayer.xSize != null) {
                                         otherPlayerDiv.style.width = otherPlayer.xSize;
                                     }
@@ -480,7 +494,7 @@
                                             otherPlayerSwordRect.bottom > playerRect.top
                                         ) {
                                             if (!dead && otherPlayer.clicked == true) {
-                                                pos.health -= swordDammage;
+                                                pos.health -= 5;
                                             }
                                             if (pos.health <= 0) {
                                                 pos.health = 100;
@@ -547,13 +561,17 @@
                         canPlaceBlock = true;
                     }, blockCooldown);
                 }
-                if (currentSlot == 3) {
+                if (currentSlot == 3 && canUseSword) {
                     sword.style.transform = 'rotate(0deg)';
                     pos.clicked = true;
+                    canUseSword = false;
                     setTimeout(() => {
                         sword.style.transform = 'rotate(90deg)';
                         pos.clicked = false;
                     }, 100);
+                    setTimeout(() => {
+                        canUseSword = true;
+                    }, 500); 
                 }
             });
             function getObjectCount() {
