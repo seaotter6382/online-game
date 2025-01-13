@@ -5,8 +5,8 @@
             html { overflow: hidden; }
             #player { height: 50px; width: 50px; background-color: blue; position: absolute; }
             .otherplayer { transition: 0.1s linear; height: 50px; width: 50px;}
-            #chatArea { height: 400px; width: 350px; bottom: 40; overflow: hidden; position: absolute; }
-            #messageInput { box-sizing: border-box; position: absolute; bottom: 10; width: 350px; }
+            #chatArea { z-index: 100; height: 400px; width: 350px; bottom: 40; overflow: hidden; position: absolute; }
+            #messageInput { z-index: 100; box-sizing: border-box; position: absolute; bottom: 10; width: 350px; }
             #invMain { z-index: 1000; height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray; }
             .slot { font-size: 18px; font-weight: bold; position: absolute; bottom: 10; height: 60px; width: 60px; background-color: rgb(187, 185, 185); margin: 10px; }
             #online-text { position: sticky; margin: 0px; }
@@ -21,12 +21,23 @@
             #healthBar { left: 50%; transform: translateX(-50%); position: absolute; height: 10px; width: 100px; background-color: rgb(255, 0, 0); }
             #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); border: 2px solid black; }
             #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
-            .arrow { height: 10px; width: 30px; background-color: brown; transition: 0.1s linear; position: absolute; transform-origin: center }
+            #colorPicker { position: absolute; width: 200px; height: 200px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; z-index: 1000; }
+            .color-section { position: absolute; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: transform 0.5s ease, opacity 0.5s ease; transform: translate(0, 0);  opacity: 1; }
+            .terrain { height: 50px; width: 50px; background-color: green; position: absolute; transition: 0.1s linear; }
+            .color-section:nth-child(1) { --dx: 75px; --dy: -75px; }
+            .color-section:nth-child(2) { --dx: 100px; --dy: 0; }
+            .color-section:nth-child(3) { --dx: 75px; --dy: 75px; }
+            .color-section:nth-child(4) { --dx: 0; --dy: 100px; }
+            .color-section:nth-child(5) { --dx: -75px; --dy: 75px; }
+            .color-section:nth-child(6) { --dx: -100px; --dy: 0; }
+            .color-section:nth-child(7) { --dx: -75px; --dy: -75px; }
+            .color-section:nth-child(8) { --dx: 0; --dy: -100px; }
         </style>
     </head>
-    <body>      
+    <body>
         <div id="usernamePopup">
-            <p id="version">version 0.7</p>
+            <p id="onlinePlayers" style="margin: 0px;">online players: 0</p>
+            <p id="version" style="margin-top: 0px;">version 0.8</p>
             <h1>enter your username</h1>
             <input maxlength="25" placeholder="username" id="usernameInput"></input><br>
             <button id="usernameButton">submit</button>
@@ -56,6 +67,16 @@
             <div id="healthBarBack">
                 <div id="healthBar"></div>
             </div>
+                <div id="colorPicker" style="display: none;">
+                    <div class="color-section" style="background-color: red;"></div>
+                    <div class="color-section" style="background-color: orange;"></div>
+                    <div class="color-section" style="background-color: yellow;"></div>
+                    <div class="color-section" style="background-color: green;"></div>
+                    <div class="color-section" style="background-color: cyan;"></div>
+                    <div class="color-section" style="background-color: blue;"></div>
+                    <div class="color-section" style="background-color: purple;"></div>
+                    <div class="color-section" style="background-color: gray; text-align: center; font-size: 25px">?</div>
+                </div>            
         </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
@@ -87,7 +108,6 @@
             let sendValue = 0;
             let showInput = false;
             const urlParams = new URLSearchParams(window.location.search);
-            const test = urlParams.get("admin");
             const width = urlParams.get("width");
             const height = urlParams.get("height");
             let enteredUser = false;
@@ -97,10 +117,10 @@
             let playerRefA = ref(database, "players/");
             let messageRef = ref(database, "messages/");
             let blockRef = ref(database, "blocks/");
+            let terrainRef = ref(database, "terrain/");
             let canUseSword = true;
             let version = "0";
-            let gameVersion = "0.7";
-            let haveSword = false;
+            let gameVersion = "0.8";
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
                     const intValue = snapshot.val();
@@ -118,11 +138,8 @@
             let worldY = 0;
             let dead = false;
             let blocks = [];
+            let terrainList = [];
             let inGame = false;
-            if (test == "true") {
-                window.history.pushState({}, '', new URL(window.location.href).pathname);
-                haveSword = true;
-            }
             let currentSlot = 1;
             let slots = document.getElementsByClassName("slot");
             slots[0].style.left = window.innerWidth / 2 - 185 + "px";
@@ -162,6 +179,7 @@
                 pos.username = document.getElementById("usernameInput").value;
                 document.getElementById("usernamePopup").style.display = "none";
                 gameLoop();
+                getTerrain();
                 setInterval(getOnlinePlayers, 100);
                 document.getElementById("main").style.display = "block";
                 let playerUsername = document.createElement("p");
@@ -171,7 +189,6 @@
                 playerUsername.style.width = window.innerWidth - 75 + "px";
                 playerUsername.style.textAlign = "center";
                 playerUsername.style.fontWeight = "bold";
-                pos.health = Math.max(100);
                 document.body.appendChild(playerUsername);
                 onChildAdded(blockRef, (snapshot) => {
                     const block = snapshot.val();
@@ -203,21 +220,11 @@
                         input.focus();
                     } else {
                         if (input.value != "") {
-                            if (!input.value.includes("/kick")) {
-                                push(messageRef, {
-                                    username: pos.username,
-                                    message: input.value,
-                                    color: pos.color
-                                });
-                            } else {
-                                if (haveSword) {
-                                    push(messageRef, {
-                                        username: pos.username,
-                                        message: input.value,
-                                        color: pos.color
-                                    });
-                                }
-                            }
+                            push(messageRef, {
+                                username: pos.username,
+                                message: input.value,
+                                color: pos.color
+                            });
                         }
                         set(messageRef, null);
                         input.value = "";
@@ -248,11 +255,6 @@
             });
             document.addEventListener("keyup", (event) => {
                 delete keys[event.key];
-            });
-            player.addEventListener("click", (event) => {
-                let randomColor =  "#" + ((1 << 24) + (Math.floor(Math.random() * 256) << 16) + (Math.floor(Math.random() * 256) << 8) + Math.floor(Math.random() * 256)).toString(16).slice(1);
-                player.style.backgroundColor = randomColor;
-                pos.color = randomColor;
             });
             set(playerRefA, null);
             player.style.left = pos.x + "px";
@@ -309,6 +311,9 @@
                         sword.style.display = 'none';
                         pos.heldItem = "none";
                     }
+                    if (pos.health > 100) { 
+                        pos.health = 100; 
+                    }
                     if (bKey) {
                         sword.style.backgroundColor = "red";
                     } else {
@@ -327,15 +332,21 @@
                         });
                     }
                     if (pos.health < 100) {
-                        pos.health += 0.25;
+                        pos.health += 0.125;
                     }
                     requestAnimationFrame(gameLoop);
                     getPlayers();
+                    renderTerrain();
                     getObjectCount();
                     updateSlotColors();
                     blocks.forEach(block => {
-                        block.style.left = worldX + block.x + "px";
-                        block.style.top = worldY + block.y + "px";
+                        if (block.x + worldX >= 0 && block.x + worldX <= window.innerWidth && block.y + worldY >= 0 && block.y + worldY <= window.innerHeight) {
+                            block.style.left = worldX + block.x + "px";
+                            block.style.top = worldY + block.y + "px";
+                            block.style.display = 'block';
+                        } else {
+                            block.style.display = 'none';
+                        }
                     });
                 }
                 if (sendValue >= 5) {
@@ -368,15 +379,6 @@
                         block.remove();
                     });
                     return;
-                }
-                if (message.message.includes("/kick")) {
-                    let command = message.message.split(' ');
-                    let playerToKick = command[1];
-                    console.log(command);
-                    if (pos.username == playerToKick) {
-                        document.body.textContent = "u got kicked";
-                        
-                    }
                 }
                 messageElement.textContent = `${message.username}: ${message.message}`;
                 const chatArea = document.getElementById("chatArea");
@@ -507,7 +509,7 @@
                                                     pos.color = color;
                                                     player.style.backgroundColor = color2;
                                                     dead = false;
-                                                }, 3000);
+                                                }, 5000);
                                             }
                                         }
                                     }
@@ -533,6 +535,7 @@
                         const players = snapshot.val();
                         const totalPlayers = Object.keys(players).length;
                         onlineText.textContent = "online players: " + totalPlayers;
+                        document.getElementById("onlinePlayers").textContent = "online players: " + totalPlayers;
                     }
                 });
             }
@@ -577,6 +580,112 @@
             function getObjectCount() {
                 let blockElements = document.getElementsByClassName("block");
                 objectText.textContent = "total objects: " + blockElements.length;
+            }
+            const colorPicker = document.getElementById("colorPicker");
+            const colorSections = document.querySelectorAll(".color-section");
+            player.addEventListener("click", (event) => {
+                const rect = player.getBoundingClientRect();
+                const x = rect.left + rect.width / 2;
+                const y = rect.top + rect.height / 2;
+                colorPicker.style.left = `${x - 100}px`;
+                colorPicker.style.top = `${y - 100}px`;
+                colorPicker.style.display = "flex";
+                colorSections.forEach((section, index) => {
+                    section.style.opacity = 0;
+                    section.style.visibility = "hidden";
+                    setTimeout(() => {
+                        section.style.visibility = "visible";
+                        section.style.opacity = 1;
+                        section.style.transform = `translate(var(--dx), var(--dy))`;
+                    }, index * 100);
+                });
+            });
+            colorSections.forEach((section) => {
+                section.addEventListener("click", (event) => {
+                    const rect = player.getBoundingClientRect();
+                    const targetX = rect.left + rect.width / 2 - 25;
+                    const targetY = rect.top + rect.height / 2 - 25;
+                    const selectedColor = event.target.style.backgroundColor;
+                    section.style.transition = "transform 0.5s ease, opacity 0.5s ease";
+                    section.style.transform = `translate(0px, 0px)`;
+                    colorSections.forEach((otherSection) => {
+                        if (otherSection !== section) {
+                            otherSection.style.opacity = 0;
+                        }
+                    });
+                    setTimeout(() => {
+                        player.style.backgroundColor = selectedColor;
+                        if (selectedColor == "red") {
+                            pos.color = "rgb(255, 0, 0)"
+                        } else {
+                            pos.color = selectedColor
+                        }
+                        if (selectedColor == "gray") {
+                            let randomColor =  "#" + ((1 << 24) + (Math.floor(Math.random() * 256) << 16) + (Math.floor(Math.random() * 256) << 8) + Math.floor(Math.random() * 256)).toString(16).slice(1);
+                            pos.color = randomColor;
+                            player.style.backgroundColor = randomColor;
+                        }
+                        colorPicker.style.display = "none";
+                        colorSections.forEach((otherSection) => {
+                            otherSection.style.transform = "translate(0, 0)";
+                            otherSection.style.opacity = 1;
+                            otherSection.style.visibility = "hidden";
+                        });
+                    }, 500);
+                });
+            });
+            document.addEventListener("click", (event) => {
+                if (!colorPicker.contains(event.target) && event.target !== player) {
+                    colorSections.forEach((section) => {
+                        section.style.transform = "translate(0, 0)";
+                        section.style.opacity = 0;
+                        section.style.visibility = "hidden";
+                    });
+                    setTimeout(() => {
+                        colorPicker.style.display = "none";
+                    }, 500);
+                }
+            });
+            function getTerrain() {
+                get(terrainRef).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        let data = snapshot.val()
+                        for (let key in data) {
+                            if (data.hasOwnProperty(key)) {
+                                const terrain = data[key];
+                                const posX = terrain.posX;
+                                const posY = terrain.posY;
+                                const newTerrain = document.createElement("div");
+                                newTerrain.style.left = worldX + posX + "px";
+                                newTerrain.style.top = worldY + posY + "px";
+                                newTerrain.x = posX;
+                                newTerrain.y = posY;
+                                newTerrain.id = key;
+                                newTerrain.classList.add("terrain");
+                                document.body.appendChild(newTerrain);
+                                terrainList.push(newTerrain);
+                            }
+                        }
+                    } else {
+                        for (let i = 0; i < 500; i++) {
+                            push(terrainRef, {
+                                posX: Math.floor(Math.random() * 10001) - 5000,
+                                posY: Math.floor(Math.random() * 10001) - 5000
+                            });
+                        }
+                    }
+                });
+            }
+            function renderTerrain() {
+                for (const item of terrainList) {
+                    if (item.x + worldX >= 0 && item.x + worldX <= window.innerWidth && item.y + worldY >= 0 && item.y + worldY <= window.innerHeight ) {
+                        item.style.left = worldX + item.x + "px";
+                        item.style.top = worldY + item.y + "px";
+                        item.style.display = "block";
+                    } else {
+                        item.style.display = "none";
+                    }
+                }
             }
             set(playerRefA, null);
         </script>
