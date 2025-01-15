@@ -23,7 +23,7 @@
             #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
             #colorPicker { position: absolute; width: 200px; height: 200px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; z-index: 1000; }
             .color-section { position: absolute; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: transform 0.5s ease, opacity 0.5s ease; transform: translate(0, 0);  opacity: 1; }
-            .terrain { height: 50px; width: 50px; background-color: green; position: absolute; transition: 0.1s linear; }
+            .terrain { z-index: -100; height: 50px; width: 50px; background-color: green; position: absolute; transition: 0.1s linear; }
             .color-section:nth-child(1) { --dx: 75px; --dy: -75px; }
             .color-section:nth-child(2) { --dx: 100px; --dy: 0; }
             .color-section:nth-child(3) { --dx: 75px; --dy: 75px; }
@@ -37,10 +37,11 @@
     <body>
         <div id="usernamePopup">
             <p id="onlinePlayers" style="margin: 0px;">online players: 0</p>
-            <p id="version" style="margin-top: 0px;">version 0.8</p>
+            <p id="version" style="margin-top: 0px;"></p>
             <h1>enter your username</h1>
             <input maxlength="25" placeholder="username" id="usernameInput"></input><br>
-            <button id="usernameButton">submit</button>
+            <button id="usernameButton" style="display: none;">submit</button>
+            <p id="errorText" style="display: none;">get the new version to play bruh</p>
         </div>
         <div style="display: none;" id="main">
             <p id="cords"></p>
@@ -77,7 +78,7 @@
                     <div class="color-section" style="background-color: purple;"></div>
                     <div class="color-section" style="background-color: gray; text-align: center; font-size: 25px">?</div>
                 </div>            
-        </div>
+            </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
             import { getDatabase, ref, set, onDisconnect, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
@@ -120,14 +121,18 @@
             let terrainRef = ref(database, "terrain/");
             let canUseSword = true;
             let version = "0";
-            let gameVersion = "0.8";
+            let gameVersion = 0.9;
+            document.getElementById("version").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
                     const intValue = snapshot.val();
-                    if (gameVersion == intValue.toString()) {
+                    if (gameVersion >= intValue) {
                         document.getElementById("version").style.color = "green";
+                        document.getElementById("usernameButton").style.display = 'block';
                     } else {
                         document.getElementById("version").style.color = "red";
+                        document.getElementById("usernameButton").remove();
+                        document.getElementById("errorText").style.display = 'block';
                     }
                 }
             })
@@ -180,7 +185,6 @@
                 document.getElementById("usernamePopup").style.display = "none";
                 gameLoop();
                 getTerrain();
-                setInterval(getOnlinePlayers, 100);
                 document.getElementById("main").style.display = "block";
                 let playerUsername = document.createElement("p");
                 playerUsername.textContent = pos.username;
@@ -298,6 +302,22 @@
                             pos.y -= 3; worldY += 3;
                         }
                     });
+                    terrainList.forEach(block => {
+                        let blockRect = block.getBoundingClientRect();
+                        let playerRect = player.getBoundingClientRect();
+                        if ((keys['a'] || keys['ArrowLeft']) && playerRect.left < blockRect.right && playerRect.left > blockRect.left && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
+                            pos.x += 3; worldX -= 3;
+                        }
+                        if ((keys['d'] || keys['ArrowRight']) && playerRect.right > blockRect.left && playerRect.right < blockRect.right && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
+                            pos.x -= 3; worldX += 3;
+                        }
+                        if ((keys['w'] || keys['ArrowUp']) && playerRect.top < blockRect.bottom && playerRect.top > blockRect.top && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
+                            pos.y += 3; worldY -= 3;
+                        }
+                        if ((keys['s'] || keys['ArrowDown']) && playerRect.bottom > blockRect.top && playerRect.bottom < blockRect.bottom && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
+                            pos.y -= 3; worldY += 3;
+                        }
+                    });
                     healthBar.style.width = pos.health + "%";
                     if (currentSlot == 2) {
                         hoverElement.style.display = "block";
@@ -340,7 +360,7 @@
                     getObjectCount();
                     updateSlotColors();
                     blocks.forEach(block => {
-                        if (block.x + worldX >= 0 && block.x + worldX <= window.innerWidth && block.y + worldY >= 0 && block.y + worldY <= window.innerHeight) {
+                        if (block.x + worldX >= -200 && block.x + worldX <= window.innerWidth + 200 && block.y + worldY >= -200 && block.y + worldY <= window.innerHeight + 200) {
                             block.style.left = worldX + block.x + "px";
                             block.style.top = worldY + block.y + "px";
                             block.style.display = 'block';
@@ -357,7 +377,13 @@
             }
             onChildAdded(messageRef, (snapshot) => {
                 const message = snapshot.val();
-                const messageElement = document.createElement("p");
+                let messageElement;
+                if (message.message.includes("***")) {
+                    message.message = message.message.replace("***", "");
+                    messageElement = document.createElement("h1");
+                } else {
+                    messageElement = document.createElement("p");
+                }
                 messageElement.id = "playerMessage";
                 if (message.color != "red") {
                     messageElement.style.color = message.color;
@@ -471,6 +497,14 @@
                                     otherPlayerSword.style.top = "-30px";
                                     if (otherPlayer.deleteSword == true) {
                                         otherPlayerSword.style.backgroundColor = "red";
+                                        blocks.forEach(block => {
+                                            let swordRect = otherPlayerSword.getBoundingClientRect();
+                                            let blockRect = block.getBoundingClientRect();
+                                            if (swordRect.left < blockRect.right && swordRect.right > blockRect.left && swordRect.top < blockRect.bottom && swordRect.bottom > blockRect.top) {
+                                                block.remove();
+                                                blocks = blocks.filter(b => b !== block);
+                                            }
+                                        });
                                     } else {
                                         otherPlayerSword.style.backgroundColor = "black";
                                     }
@@ -489,12 +523,7 @@
                                     const playerRect = player.getBoundingClientRect();
                                     if (otherPlayerSword && otherPlayerSword.style.display == 'block') {
                                         const otherPlayerSwordRect = otherPlayerSword.getBoundingClientRect();
-                                        if (
-                                            otherPlayerSwordRect.left < playerRect.right &&
-                                            otherPlayerSwordRect.right > playerRect.left &&
-                                            otherPlayerSwordRect.top < playerRect.bottom &&
-                                            otherPlayerSwordRect.bottom > playerRect.top
-                                        ) {
+                                        if (otherPlayerSwordRect.left < playerRect.right && otherPlayerSwordRect.right > playerRect.left && otherPlayerSwordRect.top < playerRect.bottom && otherPlayerSwordRect.bottom > playerRect.top) {
                                             if (!dead && otherPlayer.clicked == true) {
                                                 pos.health -= 5;
                                             }
@@ -660,17 +689,20 @@
                                 newTerrain.style.top = worldY + posY + "px";
                                 newTerrain.x = posX;
                                 newTerrain.y = posY;
+                                newTerrain.style.width = terrain.size;
+                                newTerrain.style.height = terrain.size;
                                 newTerrain.id = key;
                                 newTerrain.classList.add("terrain");
                                 document.body.appendChild(newTerrain);
                                 terrainList.push(newTerrain);
                             }
                         }
-                    } else {
+                        } else {
                         for (let i = 0; i < 500; i++) {
                             push(terrainRef, {
                                 posX: Math.floor(Math.random() * 10001) - 5000,
-                                posY: Math.floor(Math.random() * 10001) - 5000
+                                posY: Math.floor(Math.random() * 10001) - 5000,
+                                size: Math.floor(Math.random() * (200 - 50 + 1)) + 50
                             });
                         }
                     }
@@ -678,7 +710,7 @@
             }
             function renderTerrain() {
                 for (const item of terrainList) {
-                    if (item.x + worldX >= 0 && item.x + worldX <= window.innerWidth && item.y + worldY >= 0 && item.y + worldY <= window.innerHeight ) {
+                    if (item.x + worldX >= -200 && item.x + worldX <= window.innerWidth + 200 && item.y + worldY >= -200 && item.y + worldY <= window.innerHeight + 200 ) {
                         item.style.left = worldX + item.x + "px";
                         item.style.top = worldY + item.y + "px";
                         item.style.display = "block";
@@ -687,6 +719,7 @@
                     }
                 }
             }
+            setInterval(getOnlinePlayers, 100);
             set(playerRefA, null);
         </script>
     </body>
