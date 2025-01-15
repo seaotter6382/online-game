@@ -7,7 +7,7 @@
             .otherplayer { transition: 0.1s linear; height: 50px; width: 50px;}
             #chatArea { z-index: 100; height: 400px; width: 350px; bottom: 40; overflow: hidden; position: absolute; }
             #messageInput { z-index: 100; box-sizing: border-box; position: absolute; bottom: 10; width: 350px; }
-            #invMain { z-index: 1000; height: 90%; width: 90%; left: 5%; top: 5%; position: absolute; background-color: gray; }
+            #invMain { z-index: 1000; padding: 10px; width: 45%; left: 30%; top: 5%; position: absolute; background-color: gray; }
             .slot { font-size: 18px; font-weight: bold; position: absolute; bottom: 10; height: 60px; width: 60px; background-color: rgb(187, 185, 185); margin: 10px; }
             #online-text { position: sticky; margin: 0px; }
             #cords { margin-bottom: 0px; }
@@ -22,7 +22,7 @@
             #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); border: 2px solid black; }
             #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
             #colorPicker { position: absolute; width: 200px; height: 200px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; z-index: 1000; }
-            .color-section { position: absolute; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: transform 0.5s ease, opacity 0.5s ease; transform: translate(0, 0);  opacity: 1; }
+            .color-section { position: absolute; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: transform 0.5s ease, opacity 0.5s ease; transform: translate(0, 0); opacity: 1; }
             .terrain { z-index: -100; height: 50px; width: 50px; background-color: green; position: absolute; transition: 0.1s linear; }
             .color-section:nth-child(1) { --dx: 75px; --dy: -75px; }
             .color-section:nth-child(2) { --dx: 100px; --dy: 0; }
@@ -32,6 +32,10 @@
             .color-section:nth-child(6) { --dx: -100px; --dy: 0; }
             .color-section:nth-child(7) { --dx: -75px; --dy: -75px; }
             .color-section:nth-child(8) { --dx: 0; --dy: -100px; }
+            #inventory { z-index: 10000; left: 2.5%; top: 2.5%; height: 95%; width: 95%; background-color: rgba(50, 50, 50, 0.9); position: absolute; }
+            #usernameButton { transition: 0.5s ease; border: 2px solid green; background-color: white; padding: 15px; font-size: 20px; border-radius: 12px; cursor: pointer; }
+            #usernameButton:hover { background-color: green; box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19); }
+            #usernameInput:focus { transform: 0.5s linear; box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19); }
         </style>
     </head>
     <body>
@@ -52,7 +56,8 @@
                 <div id="sword"></div>
             </div>
             <div id="invMain" style="display: none;">
-                <h1 style="text-align: center;">menu</h1>
+                <h1 style="text-align: center; margin: 0px; margin-bottom: 10px;">players</h1>
+                <div id="playerList"></div>
             </div>
             <div id="chatArea"></div>
             <input id="messageInput" placeholder="press enter to message" maxlength="50"></input>
@@ -79,6 +84,9 @@
                     <div class="color-section" style="background-color: gray; text-align: center; font-size: 25px">?</div>
                 </div>            
             </div>
+            <div id="inventory" style="display: none; text-align: center;">
+                <h1>inventory</h1>
+            </div>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
             import { getDatabase, ref, set, onDisconnect, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
@@ -104,6 +112,7 @@
             let sword = document.getElementById("sword");
             let healthBar = document.getElementById("healthBar");
             let healthBarBack = document.getElementById("healthBarBack");
+            let inventory = document.getElementById("inventory");
             let keys = {};
             let bKey = false;
             let sendValue = 0;
@@ -121,7 +130,7 @@
             let terrainRef = ref(database, "terrain/");
             let canUseSword = true;
             let version = "0";
-            let gameVersion = 0.9;
+            let gameVersion = 1.0;
             document.getElementById("version").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
@@ -219,6 +228,9 @@
                     bKey = !bKey
                     pos.deleteSword = bKey;
                 }
+                if (event.key == "e" && inGame && document.activeElement !== input) {
+                    inventory.style.display = (inventory.style.display === "none") ? "block" : "none";
+                }
                 if (event.key == "Enter") {     
                     if (document.activeElement !== input) {
                         input.focus();
@@ -279,6 +291,20 @@
                         if (keys['3']) { currentSlot = 3; }
                         if (keys['4']) { currentSlot = 4; }
                         if (keys['5']) { currentSlot = 5; }
+                        if (keys[' ']) {
+                            if (currentSlot == 3 && canUseSword) {
+                                sword.style.transform = 'rotate(0deg)';
+                                pos.clicked = true;
+                                canUseSword = false;
+                                setTimeout(() => {
+                                    sword.style.transform = 'rotate(90deg)';
+                                    pos.clicked = false;
+                                }, 100);
+                                setTimeout(() => {
+                                    canUseSword = true;
+                                }, 500); 
+                            }
+                        }
                     } 
                     cordsText.textContent = "cords: " + worldX + ", " + worldY;
                     player.style.width = pos.xSize;
@@ -532,8 +558,8 @@
                                                 dead = true;
                                                 let color = pos.color;
                                                 let color2 = player.style.backgroundColor;
-                                                pos.color = "rgba(100, 100, 100, 100)";
-                                                player.style.backgroundColor = "rgba(100, 100, 100, 100)"
+                                                pos.color = "rgba(100, 100, 100, 0.5)";
+                                                player.style.backgroundColor = "rgba(100, 100, 100, 0.5)"
                                                 setTimeout(() => {
                                                     pos.color = color;
                                                     player.style.backgroundColor = color2;
@@ -559,9 +585,22 @@
                 });
             }
             function getOnlinePlayers() {
+                document.getElementById("playerList").innerHTML = "";
                 get(playerRefA).then((snapshot) => {
                     if (snapshot.exists()) {
+                        let p = "";
                         const players = snapshot.val();
+                        for (let key in players) {
+                            const otherPlayer = players[key];
+                            let newText = document.createElement("p");
+                            newText.textContent = otherPlayer.username;
+                            newText.style.textAlign = "center";
+                            newText.style.margin = "0px";
+                            if (!otherPlayer.color == "red") {
+                                newText.style.color = otherPlayer.color;
+                            }
+                            document.getElementById("playerList").appendChild(newText);
+                        }
                         const totalPlayers = Object.keys(players).length;
                         onlineText.textContent = "online players: " + totalPlayers;
                         document.getElementById("onlinePlayers").textContent = "online players: " + totalPlayers;
@@ -585,7 +624,8 @@
                     push(blockRef, {
                         x: event.clientX - worldX - 25,
                         y: event.clientY - worldY - 25,
-                        color: color
+                        color: color,
+                        kind: "cube"
                     });
                     set(blockRef, null);
                     canPlaceBlock = false;
