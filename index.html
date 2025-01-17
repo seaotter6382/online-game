@@ -14,8 +14,8 @@
             #usernameInput { margin-bottom: 10px; }
             #usernamePopup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
             #playerMessage { margin: 5px; }
-            #wall {  height: 100px; width: 100px; background-color: rgb(165, 91, 42); position: absolute; }
-            #hover { position: absolute; height: 50px; width: 50px; background-color: rgba(83, 83, 83, 0.5); }
+            #wall { height: 100px; width: 100px; background-color: rgb(165, 91, 42); position: absolute; }
+            #hover { transition: transform 0.1s linear; position: absolute; height: 50px; width: 50px; background-color: rgba(83, 83, 83, 0.5); }
             #healthBar { z-index: 10; left: 50%; transform: translateX(-50%); position: absolute; height: 10px; width: 100px; background-color: rgb(255, 0, 0); }
             #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); border: 2px solid black; }
             #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
@@ -34,8 +34,12 @@
             #usernameButton { transition: 0.5s ease; border: 2px solid green; background-color: white; padding: 15px; font-size: 20px; border-radius: 12px; cursor: pointer; }
             #usernameButton:hover { background-color: green; box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19); }
             #usernameInput:focus { transition: 0.5s linear; box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19); }
-            #blockSelector { display: none; overflow: scroll; left: -120px; top: 80px; position: absolute; height: 200px; width: 300px; background-color: rgba(125, 125, 125, 0.5); }
-            #sSquare { height: 50px; width: 50px; margin: 10px; background-color: white; }
+            #blockSelector { z-index: 1000; display: none; overflow: scroll; left: -120px; top: 80px; position: absolute; height: 200px; width: 300px; background-color: rgba(125, 125, 125, 0.5); }
+            #sSquare { display: inline-block; height: 50px; width: 50px; margin: 10px; background-color: white; }
+            #sRect { display: inline-block; height: 50px; width: 25px; margin: 10px; background-color: white; }
+            #sCircle { display: inline-block; height: 50px; width: 50px; margin: 10px; background-color: white; border-radius: 50%; }
+            #sSign { display: inline-block; height: 50px; width: 50px; margin: 10px; background-color: white; }
+            #signText { position: absolute; top: 6px; left: 215px; }
         </style>
     </head>
     <body>
@@ -69,10 +73,15 @@
                 <div class="slot" id="slot-5">5</div>
             </div>
             <div id="wall"></div>
-            <div id="hover">
-                <p style="position: absolute; left: -40px; top: 35px; width: 200px;">F to change object</p>
+            <div id="hover"></div>
+            <div id="hoverChild" style="position: absolute;">
+                <p id="hoverText" style="position: absolute; left: -40px; top: 35px; width: 200px;">F to change object</p>
                 <div id="blockSelector">
-                    <div id="sSquare"></div>
+                    <div id="sSquare" style="background-color: blue;"></div>
+                    <div id="sRect"></div>
+                    <div id="sCircle"></div>
+                    <div id="sSign"></div>
+                    <p id="signText">Sign</p>
                 </div>
             </div>
             <div id="healthBarBack">
@@ -119,10 +128,12 @@
             let healthBar = document.getElementById("healthBar");
             let healthBarBack = document.getElementById("healthBarBack");
             let inventory = document.getElementById("inventory");
+            let hoverChild = document.getElementById("hoverChild");
             let keys = {};
             let bKey = false;
             let sendValue = 0;
             let showInput = false;
+            hoverElement.style.width = "50px";
             const urlParams = new URLSearchParams(window.location.search);
             const width = urlParams.get("width");
             const height = urlParams.get("height");
@@ -136,7 +147,7 @@
             let terrainRef = ref(database, "terrain/");
             let canUseSword = true;
             let version = "0";
-            let gameVersion = 1.1;
+            let gameVersion = 1.2;
             document.getElementById("version").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
@@ -162,6 +173,7 @@
             let inGame = false;
             let currentSlot = 1;
             let objectSelector = true;
+            let currentObject = "cube";
             let slots = document.getElementsByClassName("slot");
             slots[0].style.left = window.innerWidth / 2 - 185 + "px";
             slots[1].style.left = window.innerWidth / 2 - 115 + "px";
@@ -214,21 +226,39 @@
                     const block = snapshot.val();
                     let newBlock = document.createElement("div");
                     newBlock.style.height = "50px";
-                    newBlock.style.width = "50px";
+                    if (block.kind == "rect") {
+                        newBlock.style.width = "25px";
+                    } else {
+                        newBlock.style.width = "50px";
+                    }
+                    if (block.kind == "circle") {
+                        newBlock.style.borderRadius = "50%";
+                    }
                     newBlock.id = "block";
                     newBlock.style.backgroundColor = block.color;
                     newBlock.style.position = "absolute";
                     newBlock.style.zIndex = -1000;
-                    newBlock.x = block.x;
+                    newBlock.style.transform = "rotate(" + block.rotation + "deg)";
+                    if (block.kind == "rect") {
+                        newBlock.x = block.x + 12.5;
+                    } else {
+                        newBlock.x = block.x;
+                    }
+                    if (block.kind == "sign") {
+                        newBlock.textContent = "sign";
+                        newBlock.contentEditable = true;
+                        newBlock.style.transform = "rotate(0deg)";
+                    }
                     newBlock.y = block.y;
                     newBlock.classList.add("block");
-                    newBlock.style.left = worldX + block.x + "px";
-                    newBlock.style.top = worldY + block.y + "px";
+                    newBlock.style.left = worldX + newBlock.x + "px";
+                    newBlock.style.top = worldY + newBlock.y + "px";
                     document.body.appendChild(newBlock);
                     blocks.push(newBlock);
                 });
                 inGame = true;
             });
+            let rotation = 0;
             document.addEventListener("keydown", (event) => {
                 keys[event.key] = true;
                 if (event.key == "b" && inGame && document.activeElement !== input) {
@@ -237,6 +267,10 @@
                 }
                 if (event.key == "f" && inGame && document.activeElement !== input && currentSlot == 2) {
                     objectSelector = !objectSelector;
+                }
+                if (event.key == "r" && inGame && document.activeElement !== input && currentSlot == 2) {
+                    rotation += 90;
+                    hoverElement.style.transform = 'rotate(' + rotation + 'deg)';
                 }
                 if (event.key == "e" && inGame && document.activeElement !== input) {
                     inventory.style.display = (inventory.style.display === "none") ? "block" : "none";
@@ -268,7 +302,7 @@
             })
             document.addEventListener('mousemove', function(event) {
                 if (objectSelector) {
-                    hoverElement.style.left = event.clientX - 25 + "px";
+                    hoverElement.style.left = event.clientX - parseInt(hoverElement.style.width) / 2 + "px";
                     hoverElement.style.top = event.clientY - 25 + "px";
                 }
                 let mouseX = event.clientX;
@@ -323,6 +357,9 @@
                     player.style.height = pos.ySize;
                     wall.style.left = worldX + 500 + "px";
                     wall.style.top = worldY + 500 + "px";
+                    hoverChild.style.display = hoverElement.style.display;
+                    hoverChild.style.left = hoverElement.style.left;
+                    hoverChild.style.top = hoverElement.style.top;
                     document.getElementById("usernameInput").maxlength = 25;
                     blocks.forEach(block => {
                         let blockRect = block.getBoundingClientRect();
@@ -446,11 +483,6 @@
                     audioElement.src = "https://raw.githubusercontent.com/seaotter6382/seaotter6382.github.io/refs/heads/main/sounds/" + sound + ".mp3";
                     audioElement.autoplay = true;
                     document.body.appendChild(audioElement);
-                }
-                if (message.message.includes("/open")) {
-                    let command = message.message.split(' ');
-                    let website = command[1];
-                    window.open(website, "_blank");
                 }
                 if (message.message == "/clear") {
                     set(blockRef, null);
@@ -657,7 +689,8 @@
                         x: event.clientX - worldX - 25,
                         y: event.clientY - worldY - 25,
                         color: color,
-                        kind: "cube"
+                        kind: currentObject,
+                        rotation: rotation
                     });
                     canPlaceBlock = false;
                     setTimeout(() => {
@@ -790,6 +823,46 @@
                     }
                 }
             }
+            document.getElementById("sSquare").addEventListener("click", () => {
+                console.log("clicked cube");
+                currentObject = "cube";
+                document.getElementById("sSquare").style.backgroundColor = "blue";
+                document.getElementById("sRect").style.backgroundColor = "white";
+                document.getElementById("sCircle").style.backgroundColor = "white";
+                document.getElementById("sSign").style.backgroundColor = "white";
+                document.getElementById("hover").style.width = "50px";
+                document.getElementById("hover").style.borderRadius = "0%";
+            })
+            document.getElementById("sRect").addEventListener("click", () => {
+                console.log("clicked rect");
+                currentObject = "rect";
+                document.getElementById("sRect").style.backgroundColor = "blue";
+                document.getElementById("sSquare").style.backgroundColor = "white";
+                document.getElementById("sCircle").style.backgroundColor = "white";
+                document.getElementById("sSign").style.backgroundColor = "white";
+                document.getElementById("hover").style.width = "25px";
+                document.getElementById("hover").style.borderRadius = "0%";
+            })
+            document.getElementById("sCircle").addEventListener("click", () => {
+                console.log("clicked circle");
+                currentObject = "circle";
+                document.getElementById("sRect").style.backgroundColor = "white";
+                document.getElementById("sSquare").style.backgroundColor = "white";
+                document.getElementById("sCircle").style.backgroundColor = "blue";
+                document.getElementById("sSign").style.backgroundColor = "white";
+                document.getElementById("hover").style.width = "50px";
+                document.getElementById("hover").style.borderRadius = "50%";
+            })
+            document.getElementById("sSign").addEventListener("click", () => {
+                console.log("clicked sign");
+                currentObject = "sign";
+                document.getElementById("sRect").style.backgroundColor = "white";
+                document.getElementById("sSquare").style.backgroundColor = "white";
+                document.getElementById("sCircle").style.backgroundColor = "white";
+                document.getElementById("sSign").style.backgroundColor = "blue";
+                document.getElementById("hover").style.width = "50px";
+                document.getElementById("hover").style.borderRadius = "0%";
+            })
             setInterval(getOnlinePlayers, 100);
             set(playerRefA, null);
         </script>
