@@ -285,7 +285,17 @@
                                 message: input.value,
                                 color: pos.color
                             });
-                        }
+                            if (input.value == "/clear") {
+                                set(blockRef, null);
+                                blocks.forEach(block => {
+                                    block.remove();
+                                });
+                                push(messageRef, {
+                                    username: "System",
+                                    message: pos.username + " has cleared the objects",
+                                    color: pos.color
+                                });
+                            }
                         set(messageRef, null);
                         input.value = "";
                         input.blur();
@@ -483,18 +493,6 @@
                     audioElement.src = "https://raw.githubusercontent.com/seaotter6382/seaotter6382.github.io/refs/heads/main/sounds/" + sound + ".mp3";
                     audioElement.autoplay = true;
                     document.body.appendChild(audioElement);
-                }
-                if (message.message == "/clear") {
-                    set(blockRef, null);
-                    blocks.forEach(block => {
-                        block.remove();
-                    });
-                    push(messageRef, {
-                        username: "System",
-                        message: pos.username + " has cleared the blocks",
-                        color: pos.color
-                    });
-                    return;
                 }
                 messageElement.textContent = message.username + ": " + message.message;
                 const chatArea = document.getElementById("chatArea");
