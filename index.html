@@ -4,26 +4,24 @@
         <style>
             html { overflow: hidden; }
             #player { height: 50px; width: 50px; background-color: blue; position: absolute; }
-            .otherplayer { transition: 0.1s linear; height: 50px; width: 50px;}
+            .otherplayer { transition: 0.05s linear; height: 50px; width: 50px;}
             #chatArea { z-index: 100; height: 400px; width: 350px; bottom: 40; overflow: hidden; position: absolute; }
             #messageInput { z-index: 100; box-sizing: border-box; position: absolute; bottom: 10; width: 350px; }
             #invMain { z-index: 1000; padding: 10px; width: 45%; left: 30%; top: 5%; position: absolute; background-color: gray; }
-            .slot { font-size: 18px; font-weight: bold; position: absolute; bottom: 10; height: 60px; width: 60px; background-color: rgb(187, 185, 185); margin: 10px; }
+            .slot { z-index: 100; font-size: 18px; font-weight: bold; position: absolute; bottom: 10; height: 60px; width: 60px; background-color: rgb(187, 185, 185); margin: 10px; }
             #online-text { position: sticky; margin: 0px; }
             #cords { margin-bottom: 0px; }
             #usernameInput { margin-bottom: 10px; }
             #usernamePopup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
             #playerMessage { margin: 5px; }
-            #wall { transition: 0.1s linear; height: 100px; width: 100px; background-color: rgb(165, 91, 42); position: absolute; }
-            #block { transition: 0.1s linear; }
+            #wall {  height: 100px; width: 100px; background-color: rgb(165, 91, 42); position: absolute; }
             #hover { position: absolute; height: 50px; width: 50px; background-color: rgba(83, 83, 83, 0.5); }
-            .object { transition: 0.1s linear; }
-            #healthBar { left: 50%; transform: translateX(-50%); position: absolute; height: 10px; width: 100px; background-color: rgb(255, 0, 0); }
+            #healthBar { z-index: 10; left: 50%; transform: translateX(-50%); position: absolute; height: 10px; width: 100px; background-color: rgb(255, 0, 0); }
             #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); border: 2px solid black; }
             #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
             #colorPicker { position: absolute; width: 200px; height: 200px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; z-index: 1000; }
             .color-section { position: absolute; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: transform 0.5s ease, opacity 0.5s ease; transform: translate(0, 0); opacity: 1; }
-            .terrain { z-index: -100; height: 50px; width: 50px; background-color: green; position: absolute; transition: 0.1s linear; }
+            .terrain { z-index: -100; height: 50px; width: 50px; background-color: green; position: absolute; }
             .color-section:nth-child(1) { --dx: 75px; --dy: -75px; }
             .color-section:nth-child(2) { --dx: 100px; --dy: 0; }
             .color-section:nth-child(3) { --dx: 75px; --dy: 75px; }
@@ -35,7 +33,9 @@
             #inventory { z-index: 10000; left: 2.5%; top: 2.5%; height: 95%; width: 95%; background-color: rgba(50, 50, 50, 0.9); position: absolute; }
             #usernameButton { transition: 0.5s ease; border: 2px solid green; background-color: white; padding: 15px; font-size: 20px; border-radius: 12px; cursor: pointer; }
             #usernameButton:hover { background-color: green; box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19); }
-            #usernameInput:focus { transform: 0.5s linear; box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19); }
+            #usernameInput:focus { transition: 0.5s linear; box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19); }
+            #blockSelector { display: none; overflow: scroll; left: -120px; top: 80px; position: absolute; height: 200px; width: 300px; background-color: rgba(125, 125, 125, 0.5); }
+            #sSquare { height: 50px; width: 50px; margin: 10px; background-color: white; }
         </style>
     </head>
     <body>
@@ -43,7 +43,7 @@
             <p id="onlinePlayers" style="margin: 0px;">online players: 0</p>
             <p id="version" style="margin-top: 0px;"></p>
             <h1>enter your username</h1>
-            <input maxlength="25" placeholder="username" id="usernameInput"></input><br>
+            <input onkeydown="return /[a-z]/i.test(event.key)" maxlength="25" placeholder="username" id="usernameInput"></input><br>
             <button id="usernameButton" style="display: none;">submit</button>
             <p id="errorText" style="display: none;">get the new version to play bruh</p>
         </div>
@@ -69,7 +69,12 @@
                 <div class="slot" id="slot-5">5</div>
             </div>
             <div id="wall"></div>
-            <div id="hover"></div>
+            <div id="hover">
+                <p style="position: absolute; left: -40px; top: 35px; width: 200px;">F to change object</p>
+                <div id="blockSelector">
+                    <div id="sSquare"></div>
+                </div>
+            </div>
             <div id="healthBarBack">
                 <div id="healthBar"></div>
             </div>
@@ -88,6 +93,7 @@
                 <h1>inventory</h1>
             </div>
         <script type="module">
+            let playerTransition = "0.05s linear";
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
             import { getDatabase, ref, set, onDisconnect, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
             const firebaseConfig = {
@@ -130,7 +136,7 @@
             let terrainRef = ref(database, "terrain/");
             let canUseSword = true;
             let version = "0";
-            let gameVersion = 1.0;
+            let gameVersion = 1.1;
             document.getElementById("version").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
@@ -155,6 +161,7 @@
             let terrainList = [];
             let inGame = false;
             let currentSlot = 1;
+            let objectSelector = true;
             let slots = document.getElementsByClassName("slot");
             slots[0].style.left = window.innerWidth / 2 - 185 + "px";
             slots[1].style.left = window.innerWidth / 2 - 115 + "px";
@@ -228,6 +235,9 @@
                     bKey = !bKey
                     pos.deleteSword = bKey;
                 }
+                if (event.key == "f" && inGame && document.activeElement !== input && currentSlot == 2) {
+                    objectSelector = !objectSelector;
+                }
                 if (event.key == "e" && inGame && document.activeElement !== input) {
                     inventory.style.display = (inventory.style.display === "none") ? "block" : "none";
                 }
@@ -257,8 +267,10 @@
                 }
             })
             document.addEventListener('mousemove', function(event) {
-                hoverElement.style.left = event.clientX - 25 + "px";
-                hoverElement.style.top = event.clientY - 25 + "px";
+                if (objectSelector) {
+                    hoverElement.style.left = event.clientX - 25 + "px";
+                    hoverElement.style.top = event.clientY - 25 + "px";
+                }
                 let mouseX = event.clientX;
                 let mouseY = event.clientY;
                 let playerRect = player.getBoundingClientRect();
@@ -328,6 +340,11 @@
                             pos.y -= 3; worldY += 3;
                         }
                     });
+                    if (!objectSelector) {
+                        document.getElementById("blockSelector").style.display = "block";
+                    } else {
+                        document.getElementById("blockSelector").style.display = 'none';
+                    }
                     terrainList.forEach(block => {
                         let blockRect = block.getBoundingClientRect();
                         let playerRect = player.getBoundingClientRect();
@@ -358,7 +375,11 @@
                         pos.heldItem = "none";
                     }
                     if (pos.health > 100) { 
-                        pos.health = 100; 
+                        document.body.textContent = "stop cheating cheater";
+                        return;
+                    }
+                    if (pos.username == "") {
+                        document.body.textContent = "stop cheating cheater";
                     }
                     if (bKey) {
                         sword.style.backgroundColor = "red";
@@ -426,13 +447,24 @@
                     audioElement.autoplay = true;
                     document.body.appendChild(audioElement);
                 }
+                if (message.message.includes("/open")) {
+                    let command = message.message.split(' ');
+                    let website = command[1];
+                    window.open(website, "_blank");
+                }
                 if (message.message == "/clear") {
+                    set(blockRef, null);
                     blocks.forEach(block => {
                         block.remove();
                     });
+                    push(messageRef, {
+                        username: "System",
+                        message: pos.username + " has cleared the blocks",
+                        color: pos.color
+                    });
                     return;
                 }
-                messageElement.textContent = `${message.username}: ${message.message}`;
+                messageElement.textContent = message.username + ": " + message.message;
                 const chatArea = document.getElementById("chatArea");
                 const inputElement = document.getElementById("messageInput");
                 chatArea.appendChild(messageElement);
@@ -459,7 +491,7 @@
                                         otherPlayerHealthBack.style.width = "100px";
                                         otherPlayerHealthBack.style.backgroundColor = "rgb(75, 75, 75)";
                                         otherPlayerHealthBack.style.position = "absolute";
-                                        otherPlayerHealthBack.style.transition = "0.1s linear";
+                                        otherPlayerHealthBack.style.transition = playerTransition;
                                         otherPlayerHealthBack.style.zIndex = 99;
                                         document.getElementById("playerContainer").appendChild(otherPlayerHealthBack);
                                     }
@@ -470,7 +502,7 @@
                                         otherPlayerHealth.style.width = "100px";
                                         otherPlayerHealth.style.backgroundColor = "rgb(255, 0, 0)";
                                         otherPlayerHealth.style.position = "absolute";
-                                        otherPlayerHealth.style.transition = "0.1s linear";
+                                        otherPlayerHealth.style.transition = playerTransition;
                                         otherPlayerHealth.style.zIndex = 100;
                                         document.getElementById(key + "healthBack").appendChild(otherPlayerHealth);
                                     }
@@ -481,7 +513,7 @@
                                         otherPlayerUsername.style.textAlign = "center";
                                         otherPlayerUsername.style.position = "absolute";
                                         otherPlayerUsername.style.fontWeight = "bold";
-                                        otherPlayerUsername.style.transition = "0.1s linear";
+                                        otherPlayerUsername.style.transition = playerTransition;
                                         otherPlayerUsername.style.zIndex = 100;
                                         document.getElementById("playerContainer").appendChild(otherPlayerUsername);
                                     }
@@ -499,7 +531,7 @@
                                         otherPlayerSword.id = key + "sword";
                                         otherPlayerSword.style.backgroundColor = "rgb(0, 0, 0)";
                                         otherPlayerSword.style.position = "absolute";
-                                        otherPlayerSword.style.transition = "0.1s linear";
+                                        otherPlayerSword.style.transition = playerTransition;
                                         otherPlayerSword.style.transformOrigin = "bottom";
                                         otherPlayerSword.style.transform = "rotate(90deg)";
                                         otherPlayerDiv.appendChild(otherPlayerSword);
@@ -521,7 +553,7 @@
                                     otherPlayerDiv.style.backgroundColor = otherPlayer.color;
                                     otherPlayerSword.style.left = "45px";
                                     otherPlayerSword.style.top = "-30px";
-                                    if (otherPlayer.deleteSword == true) {
+                                    if (otherPlayer.deleteSword == true && otherPlayer.color != pos.color) {
                                         otherPlayerSword.style.backgroundColor = "red";
                                         blocks.forEach(block => {
                                             let swordRect = otherPlayerSword.getBoundingClientRect();
@@ -608,9 +640,9 @@
                 });
             }
             let canPlaceBlock = true;
-            const blockCooldown = 500;
+            const blockCooldown = 250;
             document.addEventListener("click", (event) => {
-                if (currentSlot == 2 && canPlaceBlock && !dead) {
+                if (currentSlot == 2 && canPlaceBlock && !dead && objectSelector) {
                     let clickedElement = document.elementFromPoint(event.clientX, event.clientY);
                     if (clickedElement.id == "player" || clickedElement.id == "wall" || clickedElement.id == "block") {
                         return;
@@ -627,7 +659,6 @@
                         color: color,
                         kind: "cube"
                     });
-                    set(blockRef, null);
                     canPlaceBlock = false;
                     setTimeout(() => {
                         canPlaceBlock = true;
