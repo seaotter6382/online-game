@@ -96,15 +96,15 @@
                     <div class="color-section" style="background-color: blue;"></div>
                     <div class="color-section" style="background-color: purple;"></div>
                     <div class="color-section" style="background-color: gray; text-align: center; font-size: 25px">?</div>
-                </div>            
+                </div>
             </div>
             <div id="inventory" style="display: none; text-align: center;">
                 <h1>inventory</h1>
             </div>
         <script type="module">
             let playerTransition = "0.05s linear";
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"; 
-            import { getDatabase, ref, set, onDisconnect, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"; 
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+            import { getDatabase, ref, set, onDisconnect, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
             const firebaseConfig = {
                 apiKey: "AIzaSyBdqoHJ58sFCcKpdHLw7mKUg_Bpi7xc7ok",
                 authDomain: "game-10962.firebaseapp.com",
@@ -275,7 +275,7 @@
                 if (event.key == "e" && inGame && document.activeElement !== input) {
                     inventory.style.display = (inventory.style.display === "none") ? "block" : "none";
                 }
-                if (event.key == "Enter") {     
+                if (event.key == "Enter") {
                     if (document.activeElement !== input) {
                         input.focus();
                     } else {
@@ -286,17 +286,17 @@
                                 color: pos.color
                             });
                         }
-                            if (input.value == "/clear") {
-                                set(blockRef, null);
-                                blocks.forEach(block => {
-                                    block.remove();
-                                });
-                                push(messageRef, {
-                                    username: "System",
-                                    message: pos.username + " has cleared the objects",
-                                    color: pos.color
-                                });
-                            }
+                        if (input.value == "/clear") {
+                            set(blockRef, null);
+                            blocks.forEach(block => {
+                                block.remove();
+                            });
+                            push(messageRef, {
+                                username: "System",
+                                message: pos.username + " has cleared the objects",
+                                color: pos.color
+                            });
+                        }
                         set(messageRef, null);
                         input.value = "";
                         input.blur();
@@ -332,17 +332,22 @@
             set(playerRefA, null);
             player.style.left = pos.x + "px";
             player.style.top = pos.y + "px";
-            function gameLoop() {
+            let pTime = 0;
+            const f = 200;
+            function gameLoop(currentTime) {
+                let deltaTime = (currentTime - pTime) / 1000;
+                pTime = currentTime;
+                const e = f * deltaTime;
                 if (player) {
                     if (document.activeElement !== input && !dead) {
-                        if (keys['a']) { worldX = Math.min(worldX + 3, 5000); pos.x = Math.max(pos.x - 3, -5000); }
-                        if (keys['w']) { worldY = Math.min(worldY + 3, 5000); pos.y = Math.max(pos.y - 3, -5000); }
-                        if (keys['s']) { worldY = Math.max(worldY - 3, -5000); pos.y = Math.min(pos.y + 3, 5000); }
-                        if (keys['d']) { worldX = Math.max(worldX - 3, -5000); pos.x = Math.min(pos.x + 3, 5000); }
-                        if (keys['ArrowLeft']) { worldX = Math.min(worldX + 3, 5000); pos.x = Math.max(pos.x - 3, -5000); }
-                        if (keys['ArrowUp']) { worldY = Math.min(worldY + 3, 5000); pos.y = Math.max(pos.y - 3, -5000); }
-                        if (keys['ArrowDown']) { worldY = Math.max(worldY - 3, -5000); pos.y = Math.min(pos.y + 3, 5000); }
-                        if (keys['ArrowRight']) { worldX = Math.max(worldX - 3, -5000); pos.x = Math.min(pos.x + 3, 5000); }
+                        if (keys['a']) { worldX = Math.min(worldX + e, 5000); pos.x = Math.max(pos.x - e, -5000); }
+                        if (keys['w']) { worldY = Math.min(worldY + e, 5000); pos.y = Math.max(pos.y - e, -5000); }
+                        if (keys['s']) { worldY = Math.max(worldY - e, -5000); pos.y = Math.min(pos.y + e, 5000); }
+                        if (keys['d']) { worldX = Math.max(worldX - e, -5000); pos.x = Math.min(pos.x + e, 5000); }
+                        if (keys['ArrowLeft']) { worldX = Math.min(worldX + e, 5000); pos.x = Math.max(pos.x - e, -5000); }
+                        if (keys['ArrowUp']) { worldY = Math.min(worldY + e, 5000); pos.y = Math.max(pos.y - e, -5000); }
+                        if (keys['ArrowDown']) { worldY = Math.max(worldY - e, -5000); pos.y = Math.min(pos.y + e, 5000); }
+                        if (keys['ArrowRight']) { worldX = Math.max(worldX - e, -5000); pos.x = Math.min(pos.x + e, 5000); }
                         if (keys['1']) { currentSlot = 1; }
                         if (keys['2']) { currentSlot = 2; }
                         if (keys['3']) { currentSlot = 3; }
@@ -359,11 +364,11 @@
                                 }, 100);
                                 setTimeout(() => {
                                     canUseSword = true;
-                                }, 500); 
+                                }, 500);
                             }
                         }
-                    } 
-                    cordsText.textContent = "cords: " + worldX + ", " + worldY;
+                    }
+                    cordsText.textContent = "cords: " + Math.round(worldX) + ", " + Math.round(worldY);
                     player.style.width = pos.xSize;
                     player.style.height = pos.ySize;
                     wall.style.left = worldX + 500 + "px";
@@ -376,16 +381,16 @@
                         let blockRect = block.getBoundingClientRect();
                         let playerRect = player.getBoundingClientRect();
                         if ((keys['a'] || keys['ArrowLeft']) && playerRect.left < blockRect.right && playerRect.left > blockRect.left && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
-                            pos.x += 3; worldX -= 3;
+                            pos.x += e; worldX -= e;
                         }
                         if ((keys['d'] || keys['ArrowRight']) && playerRect.right > blockRect.left && playerRect.right < blockRect.right && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
-                            pos.x -= 3; worldX += 3;
+                            pos.x -= e; worldX += e;
                         }
                         if ((keys['w'] || keys['ArrowUp']) && playerRect.top < blockRect.bottom && playerRect.top > blockRect.top && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
-                            pos.y += 3; worldY -= 3;
+                            pos.y += e; worldY -= e;
                         }
                         if ((keys['s'] || keys['ArrowDown']) && playerRect.bottom > blockRect.top && playerRect.bottom < blockRect.bottom && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
-                            pos.y -= 3; worldY += 3;
+                            pos.y -= e; worldY += e;
                         }
                     });
                     if (!objectSelector) {
@@ -397,16 +402,16 @@
                         let blockRect = block.getBoundingClientRect();
                         let playerRect = player.getBoundingClientRect();
                         if ((keys['a'] || keys['ArrowLeft']) && playerRect.left < blockRect.right && playerRect.left > blockRect.left && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
-                            pos.x += 3; worldX -= 3;
+                            pos.x += e; worldX -= e;
                         }
                         if ((keys['d'] || keys['ArrowRight']) && playerRect.right > blockRect.left && playerRect.right < blockRect.right && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
-                            pos.x -= 3; worldX += 3;
+                            pos.x -= e; worldX += e;
                         }
                         if ((keys['w'] || keys['ArrowUp']) && playerRect.top < blockRect.bottom && playerRect.top > blockRect.top && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
-                            pos.y += 3; worldY -= 3;
+                            pos.y += e; worldY -= e;
                         }
                         if ((keys['s'] || keys['ArrowDown']) && playerRect.bottom > blockRect.top && playerRect.bottom < blockRect.bottom && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
-                            pos.y -= 3; worldY += 3;
+                            pos.y -= e; worldY += e;
                         }
                     });
                     healthBar.style.width = pos.health + "%";
@@ -422,7 +427,7 @@
                         sword.style.display = 'none';
                         pos.heldItem = "none";
                     }
-                    if (pos.health > 100) { 
+                    if (pos.health > 100) {
                         document.body.textContent = "stop cheating cheater";
                         return;
                     }
@@ -706,7 +711,7 @@
                     }, 100);
                     setTimeout(() => {
                         canUseSword = true;
-                    }, 500); 
+                    }, 500);
                 }
             });
             function getObjectCount() {
