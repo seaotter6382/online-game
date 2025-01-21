@@ -4,7 +4,7 @@
         <style>
             html { overflow: hidden; }
             #player { height: 50px; width: 50px; background-color: blue; position: absolute; }
-            .otherplayer { transition: 0.05s linear; height: 50px; width: 50px;}
+            .otherplayer { transition: 0.1s linear; height: 50px; width: 50px;}
             #chatArea { z-index: 100; height: 400px; width: 350px; bottom: 40; overflow: hidden; position: absolute; }
             #messageInput { z-index: 100; box-sizing: border-box; position: absolute; bottom: 10; width: 350px; }
             #invMain { z-index: 1000; padding: 10px; width: 45%; left: 30%; top: 5%; position: absolute; background-color: gray; }
@@ -14,14 +14,15 @@
             #usernameInput { margin-bottom: 10px; }
             #usernamePopup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
             #playerMessage { margin: 5px; }
-            #wall { height: 100px; width: 100px; background-color: rgb(165, 91, 42); position: absolute; }
+            .block { transition: 0.1s linear; }
+            #wall { transition: 0.1s linear; height: 100px; width: 100px; background-color: rgb(165, 91, 42); position: absolute; }
             #hover { transition: transform 0.1s linear; position: absolute; height: 50px; width: 50px; background-color: rgba(83, 83, 83, 0.5); }
             #healthBar { z-index: 10; left: 50%; transform: translateX(-50%); position: absolute; height: 10px; width: 100px; background-color: rgb(255, 0, 0); }
             #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); border: 2px solid black; }
             #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
             #colorPicker { position: absolute; width: 200px; height: 200px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; z-index: 1000; }
             .color-section { position: absolute; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: transform 0.5s ease, opacity 0.5s ease; transform: translate(0, 0); opacity: 1; }
-            .terrain { z-index: -100; height: 50px; width: 50px; background-color: green; position: absolute; }
+            .terrain { transition: 0.1s linear; z-index: -100; height: 50px; width: 50px; background-color: green; position: absolute; }
             .color-section:nth-child(1) { --dx: 75px; --dy: -75px; }
             .color-section:nth-child(2) { --dx: 100px; --dy: 0; }
             .color-section:nth-child(3) { --dx: 75px; --dy: 75px; }
@@ -102,7 +103,7 @@
                 <h1>inventory</h1>
             </div>
         <script type="module">
-            let playerTransition = "0.05s linear";
+            let playerTransition = "0.1s linear";
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
             import { getDatabase, ref, set, onDisconnect, onChildAdded, get, onChildRemoved, push } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
             const firebaseConfig = {
@@ -131,7 +132,6 @@
             let hoverChild = document.getElementById("hoverChild");
             let keys = {};
             let bKey = false;
-            let sendValue = 0;
             let showInput = false;
             hoverElement.style.width = "50px";
             const urlParams = new URLSearchParams(window.location.search);
@@ -147,7 +147,7 @@
             let terrainRef = ref(database, "terrain/");
             let canUseSword = true;
             let version = "0";
-            let gameVersion = 1.2;
+            let gameVersion = 1.21;
             document.getElementById("version").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
@@ -213,6 +213,7 @@
                 document.getElementById("usernamePopup").style.display = "none";
                 gameLoop();
                 getTerrain();
+                setInterval(playerSetPos, 100);
                 document.getElementById("main").style.display = "block";
                 let playerUsername = document.createElement("p");
                 playerUsername.textContent = pos.username;
@@ -469,11 +470,6 @@
                         }
                     });
                 }
-                if (sendValue >= 5) {
-                    sendValue = 0;
-                    set(playerRef, pos);
-                }
-                sendValue += 1;
             }
             onChildAdded(messageRef, (snapshot) => {
                 const message = snapshot.val();
@@ -867,6 +863,9 @@
                 document.getElementById("hover").style.width = "50px";
                 document.getElementById("hover").style.borderRadius = "0%";
             })
+            function playerSetPos() {
+                set(playerRef, pos);
+            }
             setInterval(getOnlinePlayers, 100);
             set(playerRefA, null);
         </script>
