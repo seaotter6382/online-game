@@ -21,7 +21,7 @@
             #healthBarBack { left: 50%; transform: translateX(-50%);  bottom: 85; z-index: -10; position: absolute; height: 10px; width: 100px; background-color: rgb(75, 75, 75); border: 2px solid black; }
             #sword { transition: 0.1s linear; top: -30px; left: 45px; height: 75px; width: 10px; background-color: rgb(0, 0, 0); position: absolute; transform-origin: bottom; transform: rotate(90deg); }
             #colorPicker { position: absolute; width: 200px; height: 200px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; z-index: 1000; }
-            .color-section { position: absolute; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: transform 0.5s ease, opacity 0.5s ease; transform: translate(0, 0); opacity: 1; }
+            .color-section { position: absolute; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: 0.5s ease; transform: translate(0, 0); opacity: 1; }
             .terrain { transition: 0.1s linear; z-index: -100; height: 50px; width: 50px; background-color: green; position: absolute; }
             .color-section:nth-child(1) { --dx: 75px; --dy: -75px; }
             .color-section:nth-child(2) { --dx: 100px; --dy: 0; }
@@ -40,7 +40,11 @@
             #sRect { display: inline-block; height: 50px; width: 25px; margin: 10px; background-color: white; }
             #sCircle { display: inline-block; height: 50px; width: 50px; margin: 10px; background-color: white; border-radius: 50%; }
             #sSign { display: inline-block; height: 50px; width: 50px; margin: 10px; background-color: white; }
-            #signText { position: absolute; top: 6px; left: 215px; }
+            #signText { position: absolute; top: 30px; left: 215px; }
+            #top { width: 100%; height: 25px; }
+            #objectKey { text-align: center; }
+            #sTrap { display: inline-block; height: 50px; width: 50px; margin: 10px; background-color: white; }
+            #sTrapText { margin: 0px; position: absolute; top: 47px; left: 16px; }
         </style>
     </head>
     <body>
@@ -78,11 +82,21 @@
             <div id="hoverChild" style="position: absolute;">
                 <p id="hoverText" style="position: absolute; left: -40px; top: 35px; width: 200px;">F to change object</p>
                 <div id="blockSelector">
-                    <div id="sSquare" style="background-color: blue;"></div>
-                    <div id="sRect"></div>
-                    <div id="sCircle"></div>
-                    <div id="sSign"></div>
-                    <p id="signText">Sign</p>
+                    <div id="top">
+                        <p style="left: 0; margin: 0px; width: 30px; display: inline-block;"> < Q </p>
+                        <p id="objectKey" style="margin: 0px; width: 220px; display: inline-block;">objects</p>
+                        <p style="right: 0; margin: 0px; width: 30px; display: inline-block; position: absolute;"> E > </p>
+                    </div>
+                    <div id="layer1">
+                        <div id="sSquare" style="background-color: blue;"></div>
+                        <div id="sRect"></div>
+                        <div id="sCircle"></div>
+                        <div id="sSign"></div>
+                        <p id="signText">Sign</p>
+                    </div>
+                    <div id="layer2">
+                        <div id="sTrap"><p id="sTrapText">Trap</p></div>
+                    </div>
                 </div>
             </div>
             <div id="healthBarBack">
@@ -131,6 +145,7 @@
             let inventory = document.getElementById("inventory");
             let hoverChild = document.getElementById("hoverChild");
             let keys = {};
+            let objectView = 1;
             let bKey = false;
             let showInput = false;
             hoverElement.style.width = "50px";
@@ -147,7 +162,7 @@
             let terrainRef = ref(database, "terrain/");
             let canUseSword = true;
             let version = "0";
-            let gameVersion = 1.21;
+            let gameVersion = 1.3;
             document.getElementById("version").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
@@ -235,6 +250,10 @@
                     if (block.kind == "circle") {
                         newBlock.style.borderRadius = "50%";
                     }
+                    if (block.kind == "trap") {
+                        newBlock.trap = true;
+                        newBlock.style.backgroundImage = `repeating-linear-gradient(45deg, ${block.color}, ${block.color} 10px, white 10px, white 20px)`;
+                    }
                     newBlock.id = "block";
                     newBlock.style.backgroundColor = block.color;
                     newBlock.style.position = "absolute";
@@ -273,8 +292,15 @@
                     rotation += 90;
                     hoverElement.style.transform = 'rotate(' + rotation + 'deg)';
                 }
-                if (event.key == "e" && inGame && document.activeElement !== input) {
-                    inventory.style.display = (inventory.style.display === "none") ? "block" : "none";
+                if (event.key == "e" && inGame && document.activeElement !== input && currentSlot == 2) {
+                    if (objectView == 1) {
+                        objectView += 1;
+                    }
+                }
+                if (event.key == "q" && inGame && document.activeElement !== input && currentSlot == 2) {
+                    if (objectView == 2) {
+                        objectView -= 1;
+                    }
                 }
                 if (event.key == "Enter") {
                     if (document.activeElement !== input) {
@@ -393,6 +419,9 @@
                         if ((keys['s'] || keys['ArrowDown']) && playerRect.bottom > blockRect.top && playerRect.bottom < blockRect.bottom && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
                             pos.y -= e; worldY += e;
                         }
+                        if (playerRect.left < blockRect.right && playerRect.right > blockRect.left && playerRect.top < blockRect.bottom && playerRect.bottom > blockRect.top && block.trap == true) {
+                            pos.health -= 1;
+                        }
                     });
                     if (!objectSelector) {
                         document.getElementById("blockSelector").style.display = "block";
@@ -428,12 +457,36 @@
                         sword.style.display = 'none';
                         pos.heldItem = "none";
                     }
+                    if (objectView == 1) {
+                        document.getElementById("objectKey").textContent = "objects";
+                        document.getElementById("layer1").style.display = 'inherit';
+                        document.getElementById("layer2").style.display = 'none';
+                    }
+                    if (objectView == 2) {
+                        document.getElementById("objectKey").textContent = "traps";
+                        document.getElementById("layer1").style.display = 'none';
+                        document.getElementById("layer2").style.display = 'inherit';
+                    }
+                    if (pos.health <= 0 && !dead) {
+                        pos.health = 100;
+                        dead = true;
+                        let color = pos.color;
+                        let color2 = player.style.backgroundColor;
+                        pos.color = "rgba(100, 100, 100, 0.5)";
+                        player.style.backgroundColor = "rgba(100, 100, 100, 0.5)"
+                        setTimeout(() => {
+                            pos.color = color;
+                            player.style.backgroundColor = color2;
+                            dead = false;
+                        }, 5000);
+                    }
                     if (pos.health > 100) {
                         document.body.textContent = "stop cheating cheater";
                         return;
                     }
                     if (pos.username == "") {
                         document.body.textContent = "stop cheating cheater";
+                        return;
                     }
                     if (bKey) {
                         sword.style.backgroundColor = "red";
@@ -487,6 +540,12 @@
                 if (message.username == "System") {
                     messageElement.style.fontStyle = "italic";
                     messageElement.style.color = "gray";
+                }
+                if (message.mesasge == "/clear") {
+                    set(blockRef, null);
+                    blocks.forEach(block => {
+                        block.remove();
+                    });
                 }
                 if (message.message.includes("/playsound")) {
                     let command = message.message.split(' ');
@@ -585,7 +644,7 @@
                                     otherPlayerDiv.style.backgroundColor = otherPlayer.color;
                                     otherPlayerSword.style.left = "45px";
                                     otherPlayerSword.style.top = "-30px";
-                                    if (otherPlayer.deleteSword == true && otherPlayer.color != pos.color) {
+                                    if (otherPlayer.deleteSword == true) {
                                         otherPlayerSword.style.backgroundColor = "red";
                                         blocks.forEach(block => {
                                             let swordRect = otherPlayerSword.getBoundingClientRect();
@@ -611,24 +670,11 @@
                                         otherPlayerDiv.style.height = otherPlayer.ySize;
                                     }
                                     const playerRect = player.getBoundingClientRect();
-                                    if (otherPlayerSword && otherPlayerSword.style.display == 'block') {
+                                    if (otherPlayerSword && otherPlayerSword.style.display == 'block' && otherPlayer.color != pos.color) {
                                         const otherPlayerSwordRect = otherPlayerSword.getBoundingClientRect();
                                         if (otherPlayerSwordRect.left < playerRect.right && otherPlayerSwordRect.right > playerRect.left && otherPlayerSwordRect.top < playerRect.bottom && otherPlayerSwordRect.bottom > playerRect.top) {
                                             if (!dead && otherPlayer.clicked == true) {
                                                 pos.health -= 5;
-                                            }
-                                            if (pos.health <= 0) {
-                                                pos.health = 100;
-                                                dead = true;
-                                                let color = pos.color;
-                                                let color2 = player.style.backgroundColor;
-                                                pos.color = "rgba(100, 100, 100, 0.5)";
-                                                player.style.backgroundColor = "rgba(100, 100, 100, 0.5)"
-                                                setTimeout(() => {
-                                                    pos.color = color;
-                                                    player.style.backgroundColor = color2;
-                                                    dead = false;
-                                                }, 5000);
                                             }
                                         }
                                     }
@@ -824,42 +870,52 @@
                 }
             }
             document.getElementById("sSquare").addEventListener("click", () => {
-                console.log("clicked cube");
                 currentObject = "cube";
                 document.getElementById("sSquare").style.backgroundColor = "blue";
                 document.getElementById("sRect").style.backgroundColor = "white";
                 document.getElementById("sCircle").style.backgroundColor = "white";
                 document.getElementById("sSign").style.backgroundColor = "white";
+                document.getElementById("sTrap").style.backgroundColor = "white";
                 document.getElementById("hover").style.width = "50px";
                 document.getElementById("hover").style.borderRadius = "0%";
             })
             document.getElementById("sRect").addEventListener("click", () => {
-                console.log("clicked rect");
                 currentObject = "rect";
                 document.getElementById("sRect").style.backgroundColor = "blue";
                 document.getElementById("sSquare").style.backgroundColor = "white";
                 document.getElementById("sCircle").style.backgroundColor = "white";
                 document.getElementById("sSign").style.backgroundColor = "white";
+                document.getElementById("sTrap").style.backgroundColor = "white";
                 document.getElementById("hover").style.width = "25px";
                 document.getElementById("hover").style.borderRadius = "0%";
             })
             document.getElementById("sCircle").addEventListener("click", () => {
-                console.log("clicked circle");
                 currentObject = "circle";
                 document.getElementById("sRect").style.backgroundColor = "white";
                 document.getElementById("sSquare").style.backgroundColor = "white";
                 document.getElementById("sCircle").style.backgroundColor = "blue";
                 document.getElementById("sSign").style.backgroundColor = "white";
+                document.getElementById("sTrap").style.backgroundColor = "white";
                 document.getElementById("hover").style.width = "50px";
                 document.getElementById("hover").style.borderRadius = "50%";
             })
             document.getElementById("sSign").addEventListener("click", () => {
-                console.log("clicked sign");
                 currentObject = "sign";
                 document.getElementById("sRect").style.backgroundColor = "white";
                 document.getElementById("sSquare").style.backgroundColor = "white";
                 document.getElementById("sCircle").style.backgroundColor = "white";
                 document.getElementById("sSign").style.backgroundColor = "blue";
+                document.getElementById("sTrap").style.backgroundColor = "white";
+                document.getElementById("hover").style.width = "50px";
+                document.getElementById("hover").style.borderRadius = "0%";
+            })
+            document.getElementById("sTrap").addEventListener("click", () => {
+                currentObject = "trap";
+                document.getElementById("sRect").style.backgroundColor = "white";
+                document.getElementById("sSquare").style.backgroundColor = "white";
+                document.getElementById("sCircle").style.backgroundColor = "white";
+                document.getElementById("sSign").style.backgroundColor = "white";
+                document.getElementById("sTrap").style.backgroundColor = "blue";
                 document.getElementById("hover").style.width = "50px";
                 document.getElementById("hover").style.borderRadius = "0%";
             })
