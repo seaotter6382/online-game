@@ -166,7 +166,7 @@
             let terrainRef = ref(database, "terrain/");
             let canUseSword = true;
             let version = "0";
-            let gameVersion = 1.3;
+            let gameVersion = 1.4;
             document.getElementById("version").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
