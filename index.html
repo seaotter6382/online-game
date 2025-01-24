@@ -45,6 +45,8 @@
             #objectKey { text-align: center; }
             #sTrap { display: inline-block; height: 50px; width: 50px; margin: 10px; background-color: white; }
             #sTrapText { margin: 0px; position: absolute; top: 47px; left: 16px; }
+            #sTeleporter { display: inline-block; height: 50px; width: 50px; margin: 10px; background-color: white; }
+            #teleportText { margin: 0px; display: inline-block; position: absolute; left: 13px; top: 120px; }
         </style>
     </head>
     <body>
@@ -92,7 +94,9 @@
                         <div id="sRect"></div>
                         <div id="sCircle"></div>
                         <div id="sSign"></div>
+                        <div id="sTeleporter"></div>
                         <p id="signText">Sign</p>
+                        <p id="teleportText">Warp</p>
                     </div>
                     <div id="layer2">
                         <div id="sTrap"><p id="sTrapText">Trap</p></div>
@@ -254,6 +258,10 @@
                         newBlock.trap = true;
                         newBlock.style.backgroundImage = `repeating-linear-gradient(45deg, ${block.color}, ${block.color} 10px, white 10px, white 20px)`;
                     }
+                    if (block.kind == "warp") {
+                        newBlock.style.background = `linear-gradient(90deg, transparent 45%, black 45%, black 55%, transparent 55%), linear-gradient(0deg, transparent 45%, black 45%, black 55%, transparent 55%)`;
+                        newBlock.warp = true;
+                    }
                     newBlock.id = "block";
                     newBlock.style.backgroundColor = block.color;
                     newBlock.style.position = "absolute";
@@ -314,10 +322,6 @@
                             });
                         }
                         if (input.value == "/clear") {
-                            set(blockRef, null);
-                            blocks.forEach(block => {
-                                block.remove();
-                            });
                             push(messageRef, {
                                 username: "System",
                                 message: pos.username + " has cleared the objects",
@@ -361,6 +365,7 @@
             player.style.top = pos.y + "px";
             let pTime = 0;
             const f = 200;
+            let canTeleport = true;
             function gameLoop(currentTime) {
                 let deltaTime = (currentTime - pTime) / 1000;
                 pTime = currentTime;
@@ -407,20 +412,36 @@
                     blocks.forEach(block => {
                         let blockRect = block.getBoundingClientRect();
                         let playerRect = player.getBoundingClientRect();
-                        if ((keys['a'] || keys['ArrowLeft']) && playerRect.left < blockRect.right && playerRect.left > blockRect.left && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
+                        if ((keys['a'] || keys['ArrowLeft']) && playerRect.left < blockRect.right && playerRect.left > blockRect.left && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom && block.style.backgroundColor != pos.color) {
                             pos.x += e; worldX -= e;
                         }
-                        if ((keys['d'] || keys['ArrowRight']) && playerRect.right > blockRect.left && playerRect.right < blockRect.right && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom) {
+                        if ((keys['d'] || keys['ArrowRight']) && playerRect.right > blockRect.left && playerRect.right < blockRect.right && playerRect.bottom > blockRect.top && playerRect.top < blockRect.bottom && block.style.backgroundColor != pos.color) {
                             pos.x -= e; worldX += e;
                         }
-                        if ((keys['w'] || keys['ArrowUp']) && playerRect.top < blockRect.bottom && playerRect.top > blockRect.top && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
+                        if ((keys['w'] || keys['ArrowUp']) && playerRect.top < blockRect.bottom && playerRect.top > blockRect.top && playerRect.right > blockRect.left && playerRect.left < blockRect.right && block.style.backgroundColor != pos.color) {
                             pos.y += e; worldY -= e;
                         }
-                        if ((keys['s'] || keys['ArrowDown']) && playerRect.bottom > blockRect.top && playerRect.bottom < blockRect.bottom && playerRect.right > blockRect.left && playerRect.left < blockRect.right) {
+                        if ((keys['s'] || keys['ArrowDown']) && playerRect.bottom > blockRect.top && playerRect.bottom < blockRect.bottom && playerRect.right > blockRect.left && playerRect.left < blockRect.right && block.style.backgroundColor != pos.color) {
                             pos.y -= e; worldY += e;
                         }
-                        if (playerRect.left < blockRect.right && playerRect.right > blockRect.left && playerRect.top < blockRect.bottom && playerRect.bottom > blockRect.top && block.trap == true) {
-                            pos.health -= 1;
+                        if (playerRect.left < blockRect.right && playerRect.right > blockRect.left && playerRect.top < blockRect.bottom && playerRect.bottom > blockRect.top && block.trap == true && block.style.backgroundColor != pos.color) {
+                            pos.health -= 2;
+                        }
+                        if (playerRect.left < blockRect.right && playerRect.right > blockRect.left && playerRect.top < blockRect.bottom && playerRect.bottom > blockRect.top && block.warp == true && canTeleport) {
+                            let warpBlocks = blocks.filter(block => block.warp === true);
+                            let otherWarpBlocks = warpBlocks.filter(warp => warp !== block);
+                            if (otherWarpBlocks.length > 0) {
+                                let randomIndex = Math.floor(Math.random() * otherWarpBlocks.length);
+                                let randomWarp = otherWarpBlocks[randomIndex];
+                                worldX -= parseInt(randomWarp.x) - parseInt(block.x);
+                                worldY -= parseInt(randomWarp.y) - parseInt(block.y);
+                                pos.x += parseInt(randomWarp.x) - parseInt(block.x);
+                                pos.y += parseInt(randomWarp.y) - parseInt(block.y);
+                                canTeleport = false;
+                                setTimeout(() => {
+                                    canTeleport = true;
+                                }, 1000);
+                            }
                         }
                     });
                     if (!objectSelector) {
@@ -495,7 +516,7 @@
                     }
                     if (currentSlot == 3) {
                         blocks.forEach(block => {
-                            if (currentSlot == 3 && sword.style.display == 'block' && bKey) {
+                            if (currentSlot == 3 && sword.style.display == 'block' && bKey && pos.clicked) {
                                 let swordRect = sword.getBoundingClientRect();
                                 let blockRect = block.getBoundingClientRect();
                                 if (swordRect.left < blockRect.right && swordRect.right > blockRect.left && swordRect.top < blockRect.bottom && swordRect.bottom > blockRect.top) {
@@ -541,11 +562,12 @@
                     messageElement.style.fontStyle = "italic";
                     messageElement.style.color = "gray";
                 }
-                if (message.mesasge == "/clear") {
-                    set(blockRef, null);
+                if (message.message.includes("/clear")) {
                     blocks.forEach(block => {
                         block.remove();
                     });
+                    blocks = [];
+                    set(blockRef, null);
                 }
                 if (message.message.includes("/playsound")) {
                     let command = message.message.split(' ');
@@ -644,7 +666,7 @@
                                     otherPlayerDiv.style.backgroundColor = otherPlayer.color;
                                     otherPlayerSword.style.left = "45px";
                                     otherPlayerSword.style.top = "-30px";
-                                    if (otherPlayer.deleteSword == true) {
+                                    if (otherPlayer.deleteSword == true && otherPlayer.clicked == true) {
                                         otherPlayerSword.style.backgroundColor = "red";
                                         blocks.forEach(block => {
                                             let swordRect = otherPlayerSword.getBoundingClientRect();
@@ -763,21 +785,23 @@
             const colorPicker = document.getElementById("colorPicker");
             const colorSections = document.querySelectorAll(".color-section");
             player.addEventListener("click", (event) => {
-                const rect = player.getBoundingClientRect();
-                const x = rect.left + rect.width / 2;
-                const y = rect.top + rect.height / 2;
-                colorPicker.style.left = `${x - 100}px`;
-                colorPicker.style.top = `${y - 100}px`;
-                colorPicker.style.display = "flex";
-                colorSections.forEach((section, index) => {
-                    section.style.opacity = 0;
-                    section.style.visibility = "hidden";
-                    setTimeout(() => {
-                        section.style.visibility = "visible";
-                        section.style.opacity = 1;
-                        section.style.transform = `translate(var(--dx), var(--dy))`;
-                    }, index * 100);
-                });
+                if (pos.health == 100) {
+                    const rect = player.getBoundingClientRect();
+                    const x = rect.left + rect.width / 2;
+                    const y = rect.top + rect.height / 2;
+                    colorPicker.style.left = `${x - 100}px`;
+                    colorPicker.style.top = `${y - 100}px`;
+                    colorPicker.style.display = "flex";
+                    colorSections.forEach((section, index) => {
+                        section.style.opacity = 0;
+                        section.style.visibility = "hidden";
+                        setTimeout(() => {
+                            section.style.visibility = "visible";
+                            section.style.opacity = 1;
+                            section.style.transform = `translate(var(--dx), var(--dy))`;
+                        }, index * 100);
+                    });
+                }
             });
             colorSections.forEach((section) => {
                 section.addEventListener("click", (event) => {
@@ -876,6 +900,7 @@
                 document.getElementById("sCircle").style.backgroundColor = "white";
                 document.getElementById("sSign").style.backgroundColor = "white";
                 document.getElementById("sTrap").style.backgroundColor = "white";
+                document.getElementById("sTeleporter").style.backgroundColor = "white";
                 document.getElementById("hover").style.width = "50px";
                 document.getElementById("hover").style.borderRadius = "0%";
             })
@@ -886,6 +911,7 @@
                 document.getElementById("sCircle").style.backgroundColor = "white";
                 document.getElementById("sSign").style.backgroundColor = "white";
                 document.getElementById("sTrap").style.backgroundColor = "white";
+                document.getElementById("sTeleporter").style.backgroundColor = "white";
                 document.getElementById("hover").style.width = "25px";
                 document.getElementById("hover").style.borderRadius = "0%";
             })
@@ -896,6 +922,7 @@
                 document.getElementById("sCircle").style.backgroundColor = "blue";
                 document.getElementById("sSign").style.backgroundColor = "white";
                 document.getElementById("sTrap").style.backgroundColor = "white";
+                document.getElementById("sTeleporter").style.backgroundColor = "white";
                 document.getElementById("hover").style.width = "50px";
                 document.getElementById("hover").style.borderRadius = "50%";
             })
@@ -906,6 +933,7 @@
                 document.getElementById("sCircle").style.backgroundColor = "white";
                 document.getElementById("sSign").style.backgroundColor = "blue";
                 document.getElementById("sTrap").style.backgroundColor = "white";
+                document.getElementById("sTeleporter").style.backgroundColor = "white";
                 document.getElementById("hover").style.width = "50px";
                 document.getElementById("hover").style.borderRadius = "0%";
             })
@@ -916,6 +944,18 @@
                 document.getElementById("sCircle").style.backgroundColor = "white";
                 document.getElementById("sSign").style.backgroundColor = "white";
                 document.getElementById("sTrap").style.backgroundColor = "blue";
+                document.getElementById("sTeleporter").style.backgroundColor = "white";
+                document.getElementById("hover").style.width = "50px";
+                document.getElementById("hover").style.borderRadius = "0%";
+            })
+            document.getElementById("sTeleporter").addEventListener("click", () => {
+                currentObject = "warp";
+                document.getElementById("sRect").style.backgroundColor = "white";
+                document.getElementById("sSquare").style.backgroundColor = "white";
+                document.getElementById("sCircle").style.backgroundColor = "white";
+                document.getElementById("sSign").style.backgroundColor = "white";
+                document.getElementById("sTrap").style.backgroundColor = "white";
+                document.getElementById("sTeleporter").style.backgroundColor = "blue";
                 document.getElementById("hover").style.width = "50px";
                 document.getElementById("hover").style.borderRadius = "0%";
             })
