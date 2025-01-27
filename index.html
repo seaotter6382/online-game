@@ -54,7 +54,7 @@
             <p id="onlinePlayers" style="margin: 0px;">online players: 0</p>
             <p id="version" style="margin-top: 0px;"></p>
             <h1>enter your username</h1>
-            <input onkeydown="return /[a-z]/i.test(event.key)" maxlength="25" placeholder="username" id="usernameInput"></input><br>
+            <input onkeydown="return /[a-z]/i.test(event.key)" maxlength="25" placeholder="enter your username" id="usernameInput"></input><br>
             <button id="usernameButton" style="display: none;">submit</button>
             <p id="errorText" style="display: none;">get the new version to play bruh</p>
         </div>
@@ -166,7 +166,7 @@
             let terrainRef = ref(database, "terrain/");
             let canUseSword = true;
             let version = "0";
-            let gameVersion = 1.4;
+            let gameVersion = 1.5;
             document.getElementById("version").textContent = "version " + gameVersion;
             get(ref(database, '/version')).then((snapshot) => {
                 if (snapshot.exists()) {
@@ -217,6 +217,13 @@
                 });
             }
             updateSlotColors();
+            window.addEventListener("beforeunload", (event) => {
+                push(messageRef, {
+                    username: "System",
+                    message: document.getElementById("usernameInput").value + " has left the game",
+                    color: pos.color
+                });
+            });
             document.getElementById("usernameButton").addEventListener("click", () => {
                 if (document.getElementById("usernameInput").value == "") {
                     return;
@@ -278,6 +285,7 @@
                         newBlock.style.transform = "rotate(0deg)";
                     }
                     newBlock.y = block.y;
+                    newBlock.key = snapshot.key;
                     newBlock.classList.add("block");
                     newBlock.style.left = worldX + newBlock.x + "px";
                     newBlock.style.top = worldY + newBlock.y + "px";
@@ -333,7 +341,7 @@
                         input.blur();
                     }
                 }
-                if (event.key == "Tab") {
+                if (event.key == "Tab" && inGame) {
                     event.preventDefault();
                     if (invMain.style.display == "none") {
                         invMain.style.display = 'block';
@@ -430,6 +438,7 @@
                         if (playerRect.left < blockRect.right && playerRect.right > blockRect.left && playerRect.top < blockRect.bottom && playerRect.bottom > blockRect.top && block.warp == true && canTeleport) {
                             let warpBlocks = blocks.filter(block => block.warp === true);
                             let otherWarpBlocks = warpBlocks.filter(warp => warp !== block);
+                            otherWarpBlocks = otherWarpBlocks.filter(warp => warp.style.backgroundColor === block.style.backgroundColor);
                             if (otherWarpBlocks.length > 0) {
                                 let randomIndex = Math.floor(Math.random() * otherWarpBlocks.length);
                                 let randomWarp = otherWarpBlocks[randomIndex];
@@ -440,7 +449,7 @@
                                 canTeleport = false;
                                 setTimeout(() => {
                                     canTeleport = true;
-                                }, 1000);
+                                }, 1500);
                             }
                         }
                     });
@@ -522,6 +531,12 @@
                                 if (swordRect.left < blockRect.right && swordRect.right > blockRect.left && swordRect.top < blockRect.bottom && swordRect.bottom > blockRect.top) {
                                     block.remove();
                                     blocks = blocks.filter(b => b !== block);
+                                    if (block.warp) {
+                                        blocks = blocks.filter(b => b !== block);
+                                        block.remove();
+                                    }
+                                    const blockKey = block.key;
+                                    set(ref(database, 'blocks/' + blockKey), null);
                                 }
                             }
                         });
