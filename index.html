@@ -380,14 +380,10 @@
                 const e = f * deltaTime;
                 if (player) {
                     if (document.activeElement !== input && !dead) {
-                        if (keys['a']) { worldX = Math.min(worldX + e, 5000); pos.x = Math.max(pos.x - e, -5000); }
-                        if (keys['w']) { worldY = Math.min(worldY + e, 5000); pos.y = Math.max(pos.y - e, -5000); }
-                        if (keys['s']) { worldY = Math.max(worldY - e, -5000); pos.y = Math.min(pos.y + e, 5000); }
-                        if (keys['d']) { worldX = Math.max(worldX - e, -5000); pos.x = Math.min(pos.x + e, 5000); }
-                        if (keys['ArrowLeft']) { worldX = Math.min(worldX + e, 5000); pos.x = Math.max(pos.x - e, -5000); }
-                        if (keys['ArrowUp']) { worldY = Math.min(worldY + e, 5000); pos.y = Math.max(pos.y - e, -5000); }
-                        if (keys['ArrowDown']) { worldY = Math.max(worldY - e, -5000); pos.y = Math.min(pos.y + e, 5000); }
-                        if (keys['ArrowRight']) { worldX = Math.max(worldX - e, -5000); pos.x = Math.min(pos.x + e, 5000); }
+                        if (keys['a'] || keys['ArrowLeft']) { worldX = Math.min(worldX + e, 5000); pos.x = Math.max(pos.x - e, -5000); }
+                        if (keys['w'] || keys['ArrowUp']) { worldY = Math.min(worldY + e, 5000); pos.y = Math.max(pos.y - e, -5000); }
+                        if (keys['s'] || keys['ArrowDown']) { worldY = Math.max(worldY - e, -5000); pos.y = Math.min(pos.y + e, 5000); }
+                        if (keys['d'] || keys['ArrowRight']) { worldX = Math.max(worldX - e, -5000); pos.x = Math.min(pos.x + e, 5000); }
                         if (keys['1']) { currentSlot = 1; }
                         if (keys['2']) { currentSlot = 2; }
                         if (keys['3']) { currentSlot = 3; }
